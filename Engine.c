@@ -1,22 +1,19 @@
-#include "config.h"
 #include "defs.h"
-#include "eval.c"
-#include "LichessApi.c"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #include <sys/time.h>
+#include <unistd.h>
 
-
-static void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	list->moves[list->count].move = move;
 	list->moves[list->count].score = MvvLvaScores[CAPTURED(move)][pos->pieces[FROMSQ(move)]] + 1000000;
 	list->count++;
 }
 
-static void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	
 	list->moves[list->count].move = move;
@@ -25,7 +22,7 @@ static void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 }
 
 
-static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) {	
+void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) {	
 	int side=pos->side;
 	if(RanksBrd[from] == (side?RANK_2:RANK_7)) {
 		AddCaptureMove(pos, MOVE(from,to,cap,(side?bQ:wQ),0), list);
@@ -36,8 +33,7 @@ static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, co
 		AddCaptureMove(pos, MOVE(from,to,cap,EMPTY,0), list);
 	}
 }
-
-static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list ) {
+ void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list ) {
 	int side=pos->side;
 	if(RanksBrd[from] == (side?RANK_2:RANK_7)) {
 		AddQuietMove(pos, MOVE(from,to,EMPTY,(side?bQ:wQ),0), list);
@@ -48,7 +44,32 @@ static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOV
 		AddQuietMove(pos, MOVE(from,to,EMPTY,EMPTY,0), list);
 	}
 }
-static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+void AddPiece(const int sq, S_BOARD *pos, const int pce) {
+
+	
+	int col = PieceCol[pce];
+
+    HASH_PCE(pce,sq);
+	
+	pos->pieces[sq] = pce;
+
+    if(PieceBig[pce]) {
+			pos->bigPce[col]++;
+		if(PieceMaj[pce]) {
+			pos->majPce[col]++;
+		} else {
+			pos->minPce[col]++;
+		}
+	} else {
+		SETBIT(pos->pawns[col],SQ64(sq));
+		SETBIT(pos->pawns[BOTH],SQ64(sq));
+	}
+	
+	pos->material[col] += PieceVal[pce];
+	pos->pList[pce][pos->pceNum[pce]++] = sq;
+	
+}
+void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	list->moves[list->count].move = move;
 	
@@ -61,7 +82,7 @@ static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 	}
 	list->count++;
 }
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
+int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
 
 	
 	if(depth == 0) {
@@ -90,7 +111,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	}
 	
 	S_MOVELIST list[1];
-    GenerateAllMoves(pos,list);
+    GenerateAllMoves(pos,list,0);
       
     int MoveNum = 0;
 	int Legal = 0;
@@ -160,8 +181,15 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	
 	return alpha;
 }
-
-static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
+void CheckUp(S_SEARCHINFO *info) {
+	// .. check if time up, or interrupt from GUI
+	if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
+		info->stopped = TRUE;
+	}
+		
+	ReadInput(info);
+}
+void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 	
 	int index = 0;
 	int index2 = 0;
@@ -186,6 +214,46 @@ static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 	info->fh = 0;
 	info->fhf = 0;
 }
+void ClearPiece(const int sq, S_BOARD *pos) {
+
+	
+    int pce = pos->pieces[sq];
+	
+	
+	int col = PieceCol[pce];
+	int index = 0;
+	int t_pceNum = -1;
+	
+    HASH_PCE(pce,sq);
+	
+	pos->pieces[sq] = EMPTY;
+    pos->material[col] -= PieceVal[pce];
+	
+	if(PieceBig[pce]) {
+			pos->bigPce[col]--;
+		if(PieceMaj[pce]) {
+			pos->majPce[col]--;
+		} else {
+			pos->minPce[col]--;
+		}
+	} else {
+		CLRBIT(pos->pawns[col],SQ64(sq));
+		CLRBIT(pos->pawns[BOTH],SQ64(sq));
+	}
+	
+	for(index = 0; index < pos->pceNum[pce]; ++index) {
+		if(pos->pList[pce][index] == sq) {
+			t_pceNum = index;
+			break;
+		}
+	}
+	
+	
+	pos->pceNum[pce]--;		
+	
+	pos->pList[pce][t_pceNum] = pos->pList[pce][pos->pceNum[pce]];
+  
+}
 void ClearPvTable(S_PVTABLE *table) {
 
   S_PVENTRY *pvEntry;
@@ -199,6 +267,67 @@ int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
   return r;
+}
+int EvalPosition(const S_BOARD *pos) {
+
+	int pce;
+	int pceNum;
+	int sq;
+	int score = pos->material[WHITE] - pos->material[BLACK];
+	
+	pce = wP;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += PawnTable[SQ64(sq)];
+	}	
+
+	pce = bP;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= PawnTable[MIRROR64(SQ64(sq))];
+	}	
+	
+	pce = wN;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += KnightTable[SQ64(sq)];
+	}	
+
+	pce = bN;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= KnightTable[MIRROR64(SQ64(sq))];
+	}			
+	
+	pce = wB;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += BishopTable[SQ64(sq)];
+	}	
+
+	pce = bB;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= BishopTable[MIRROR64(SQ64(sq))];
+	}	
+
+	pce = wR;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += RookTable[SQ64(sq)];
+	}	
+
+	pce = bR;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= RookTable[MIRROR64(SQ64(sq))];
+	}	
+	
+	if(pos->side == WHITE) {
+		return score;
+	} else {
+		return -score;
+	}	
 }
 int FileRankValid(const int fr) {
 	return (fr >= 0 && fr <= 7) ? 1 : 0;
@@ -220,10 +349,10 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 		sq = side? pos->pList[bP][pceNum] : pos->pList[wP][pceNum];
 		
 		if(pos->pieces[sq + side? -10:10] == EMPTY && !cap_only) {
-			AddBlackPawnMove(pos, sq, sq-10, list);
-			AddWhitePawnMove(post, sq, sq+10, list);
-			if(RanksBrd[sq] == (side: RANK_7:RANK_2) && pos->pieces[sq + (side:-20:20)] == EMPTY) {
-				AddQuietMove(pos, MOVE(sq,(sq+side:-20:20),EMPTY,EMPTY,MFLAGPS),list);
+			AddPawnMove(pos, sq, sq-10, list);
+			AddPawnMove(pos, sq, sq+10, list);
+			if(RanksBrd[sq] == (side? RANK_7:RANK_2) && pos->pieces[sq + (side?-20:20)] == EMPTY) {
+				AddQuietMove(pos, MOVE(sq,(sq+side?-20:20),EMPTY,EMPTY,MFLAGPS),list);
 			}
 		} 
 		
@@ -258,8 +387,7 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 			}
 		}
 	}
-			
-	}	
+				
 	/* Loop for slide pieces */
 	pceIndex = LoopSlideIndex[side];
 	pce = LoopSlidePce[pceIndex++];
@@ -320,12 +448,6 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 		pce = LoopNonSlidePce[pceIndex++];
 	}
 }
-int GetTimeMs() { 
-  struct timeval t;
-  gettimeofday(&t, NULL);
-  return t.tv_sec*1000 + t.tv_usec/1000;
-}
-
 U64 GeneratePosKey(const S_BOARD *pos) {
 
 	int sq = 0;
@@ -352,6 +474,37 @@ U64 GeneratePosKey(const S_BOARD *pos) {
 	
 	return finalKey;
 }
+int GetPvLine(const int depth, S_BOARD *pos) {
+
+
+	int move = ProbePvTable(pos);
+	int count = 0;
+	
+	while(move != NOMOVE && count < depth) {
+	
+	
+		if( MoveExists(pos, move) ) {
+			MakeMove(pos, move);
+			pos->PvArray[count++] = move;
+		} else {
+			break;
+		}		
+		move = ProbePvTable(pos);	
+	}
+	
+	while(pos->ply > 0) {
+		TakeMove(pos);
+	}
+	
+	return count;
+	
+}
+int GetTimeMs() { 
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return t.tv_sec*1000 + t.tv_usec/1000;
+}
+
 
 void Init() {
 	InitSq120To64();	
@@ -383,7 +536,7 @@ void InitFilesRanksBrd() {
 	int sq = A1;
 	int sq64 = 0;
 	
-	for(index = 0; index < BRD_SQ_NUM; ++index) 
+	for(index = 0; index < BRD_SQ_NUM; ++index){ 
 		FilesBrd[index] = OFFBOARD;
 		RanksBrd[index] = OFFBOARD;
 	}
@@ -455,22 +608,124 @@ void InitSq120To64() {
 		}
 	}
 }
-static int IsRepetition(const S_BOARD *pos) {
+int InputWaiting()
+{
+  fd_set readfds;
+  struct timeval tv;
+  FD_ZERO (&readfds);
+  FD_SET (fileno(stdin), &readfds);
+  tv.tv_sec=0; tv.tv_usec=0;
+  select(16, &readfds, 0, 0, &tv);
+
+  return (FD_ISSET(fileno(stdin), &readfds));
+}
+int IsRepetition(const S_BOARD *pos) {
 
 	int index = 0;
 
 	for(index = pos->hisPly - pos->fiftyMove; index < pos->hisPly-1; ++index) {	
-		ASSERT(index >= 0 && index < MAXGAMEMOVES);		
 		if(pos->posKey == pos->history[index].posKey) {
 			return TRUE;
 		}
 	}	
 	return FALSE;
 }
+int MakeMove(S_BOARD *pos, int move) {
+	int from = FROMSQ(move);
+    	int to = TOSQ(move);
+    	int side = pos->side;
+	pos->history[pos->hisPly].posKey = pos->posKey;
+	
+	if(move & MFLAGEP) {
+        if(side == WHITE) {
+            ClearPiece(to-10,pos);
+        } else {
+            ClearPiece(to+10,pos);
+        }
+    } else if (move & MFLAGCA) {
+        switch(to) {
+            case C1:
+                MovePiece(A1, D1, pos);
+			break;
+            case C8:
+                MovePiece(A8, D8, pos);
+			break;
+            case G1:
+                MovePiece(H1, F1, pos);
+			break;
+            case G8:
+                MovePiece(H8, F8, pos);
+			break;
+            default: break;
+        }
+    }	
+	
+	if(pos->enPas != NO_SQ) HASH_EP;
+    HASH_CA;
+	
+	pos->history[pos->hisPly].move = move;
+    pos->history[pos->hisPly].fiftyMove = pos->fiftyMove;
+    pos->history[pos->hisPly].enPas = pos->enPas;
+    pos->history[pos->hisPly].castlePerm = pos->castlePerm;
+
+    pos->castlePerm &= CastlePerm[from];
+    pos->castlePerm &= CastlePerm[to];
+    pos->enPas = NO_SQ;
+
+	HASH_CA;
+	
+	int captured = CAPTURED(move);
+    pos->fiftyMove++;
+	
+	if(captured != EMPTY) {
+        ClearPiece(to, pos);
+        pos->fiftyMove = 0;
+    }
+	
+	pos->hisPly++;
+	pos->ply++;
+	
+	if(PiecePawn[pos->pieces[from]]) {
+        pos->fiftyMove = 0;
+        if(move & MFLAGPS) {
+            if(side==WHITE) {
+                pos->enPas=from+10;
+            } else {
+                pos->enPas=from-10;
+            }
+            HASH_EP;
+        }
+    }
+	
+	MovePiece(from, to, pos);
+	
+	int prPce = PROMOTED(move);
+    if(prPce != EMPTY)   {
+        ClearPiece(to, pos);
+        AddPiece(to, pos, prPce);
+    }
+	
+	if(PieceKing[pos->pieces[to]]) {
+        pos->KingSq[pos->side] = to;
+    }
+	
+	pos->side ^= 1;
+    HASH_SIDE;
+
+	
+		
+	if(SqAttacked(pos->KingSq[side],pos->side,pos))  {
+        TakeMove(pos);
+        return FALSE;
+    }
+	
+	return TRUE;
+	
+}
 int MoveExists(S_BOARD *pos, const int move) {
 	
 	S_MOVELIST list[1];
-    GenerateAllMoves(pos,list);
+    GenerateAllMoves(pos,list,0);
       
     int MoveNum = 0;
 	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
@@ -485,7 +740,35 @@ int MoveExists(S_BOARD *pos, const int move) {
     }
 	return FALSE;
 }
+void MovePiece(const int from, const int to, S_BOARD *pos) {
 
+	int index = 0;
+	int pce = pos->pieces[from];	
+	int col = PieceCol[pce];
+	
+	int t_PieceNum = FALSE;
+
+	HASH_PCE(pce,from);
+	pos->pieces[from] = EMPTY;
+	
+	HASH_PCE(pce,to);
+	pos->pieces[to] = pce;
+	
+	if(!PieceBig[pce]) {
+		CLRBIT(pos->pawns[col],SQ64(from));
+		CLRBIT(pos->pawns[BOTH],SQ64(from));
+		SETBIT(pos->pawns[col],SQ64(to));
+		SETBIT(pos->pawns[BOTH],SQ64(to));		
+	}    
+	
+	for(index = 0; index < pos->pceNum[pce]; ++index) {
+		if(pos->pList[pce][index] == from) {
+			pos->pList[pce][index] = to;
+			t_PieceNum = TRUE;
+			break;
+		}
+	}
+}
 
 int ParseFen(char *fen, S_BOARD *pos)
 {
@@ -674,9 +957,47 @@ void ParsePosition(char* lineIn, S_BOARD *pos) {
               ptrChar++;
         }
     }
-	PrintBoard(pos);	
 }
-static void PickNextMove(int moveNum, S_MOVELIST *list) {
+int ParseMove(char *ptrChar, S_BOARD *pos) {
+
+	if(ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
+    if(ptrChar[3] > '8' || ptrChar[3] < '1') return NOMOVE;
+    if(ptrChar[0] > 'h' || ptrChar[0] < 'a') return NOMOVE;
+    if(ptrChar[2] > 'h' || ptrChar[2] < 'a') return NOMOVE;
+
+    int from = FR2SQ(ptrChar[0] - 'a', ptrChar[1] - '1');
+    int to = FR2SQ(ptrChar[2] - 'a', ptrChar[3] - '1');	
+	
+	
+	S_MOVELIST list[1];
+    GenerateAllMoves(pos,list,0);      
+    int MoveNum = 0;
+	int Move = 0;
+	int PromPce = EMPTY;
+	
+	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
+		Move = list->moves[MoveNum].move;
+		if(FROMSQ(Move)==from && TOSQ(Move)==to) {
+			PromPce = PROMOTED(Move);
+			if(PromPce!=EMPTY) {
+				if(IsRQ(PromPce) && !IsBQ(PromPce) && ptrChar[4]=='r') {
+					return Move;
+				} else if(!IsRQ(PromPce) && IsBQ(PromPce) && ptrChar[4]=='b') {
+					return Move;
+				} else if(IsRQ(PromPce) && IsBQ(PromPce) && ptrChar[4]=='q') {
+					return Move;
+				} else if(IsKn(PromPce)&& ptrChar[4]=='n') {
+					return Move;
+				}
+				continue;
+			}
+			return Move;
+		}
+    }
+	
+    return NOMOVE;	
+}
+void PickNextMove(int moveNum, S_MOVELIST *list) {
 
 	S_MOVE temp;
 	int index = 0;
@@ -734,7 +1055,6 @@ void PrintBitBoard(U64 bb) {
 int ProbePvTable(const S_BOARD *pos) {
 
 	int index = pos->posKey % pos->PvTable->numEntries;
-	ASSERT(index >= 0 && index <= pos->PvTable->numEntries - 1);
 	
 	if( pos->PvTable->pTable[index].posKey == pos->posKey ) {
 		return pos->PvTable->pTable[index].move;
@@ -742,10 +1062,8 @@ int ProbePvTable(const S_BOARD *pos) {
 	
 	return NOMOVE;
 }
+int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 
-static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
-
-	ASSERT(CheckBoard(pos));
 	
 	if(( info->nodes & 2047 ) == 0) {
 		CheckUp(info);
@@ -772,7 +1090,7 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 	}
 	
 	S_MOVELIST list[1];
-    GenerateAllCaps(pos,list);
+    GenerateAllMoves(pos,list,1);
       
     int MoveNum = 0;
 	int Legal = 0;
@@ -825,36 +1143,25 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 	
 	return alpha;
 }
-int PopBit(U64 *bb) {
-  U64 b = *bb ^ (*bb - 1);
-  unsigned int fold = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
-  *bb &= (*bb - 1);
-  return BitTable[(fold * 0x783a9b23) >> 26];
-}
-void PrintBitBoard(U64 bb) {
+void ReadInput(S_SEARCHINFO *info) {
+  int             bytes;
+  char            input[256] = "", *endc;
 
-	U64 shiftMe = 1ULL;
-	
-	int rank = 0;
-	int file = 0;
-	int sq = 0;
-	int sq64 = 0;
-	
-	printf("\n");
-	for(rank = RANK_8; rank >= RANK_1; --rank) {
-		for(file = FILE_A; file <= FILE_H; ++file) {
-			sq = FR2SQ(file,rank);	// 120 based		
-			sq64 = SQ64(sq); // 64 based
-			
-			if((shiftMe << sq64) & bb) 
-				printf("X");
-			else 
-				printf("-");
-				
+    if (InputWaiting()) {    
+		info->stopped = TRUE;
+		do {
+		  bytes=read(fileno(stdin),input,256);
+		} while (bytes<0);
+		endc = strchr(input,'\n');
+		if (endc) *endc=0;
+
+		if (strlen(input) > 0) {
+			if (!strncmp(input, "quit", 4))    {
+			  info->quit = TRUE;
+			}
 		}
-		printf("\n");
-	}  
-    printf("\n\n");
+		return;
+    }
 }
 void ResetBoard(S_BOARD *pos) {
 
@@ -919,43 +1226,14 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 		
 		pvMoves = GetPvLine(currentDepth, pos);
 		bestMove = pos->PvArray[0];
-		if(info->GAME_MODE == UCIMODE) {
-			printf("info score cp %d depth %d nodes %ld time %d ",
-				bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
-		} else if(info->GAME_MODE == XBOARDMODE && info->POST_THINKING == TRUE) {
-			printf("%d %d %d %ld ",
-				currentDepth,bestScore,(GetTimeMs()-info->starttime)/10,info->nodes);
-		} else if(info->POST_THINKING == TRUE) {
-			printf("score:%d depth:%d nodes:%ld time:%d(ms) ",
-				bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
-		}
-		if(info->GAME_MODE == UCIMODE || info->POST_THINKING == TRUE) {
-			pvMoves = GetPvLine(currentDepth, pos);	
-			printf("pv");		
-			for(pvNum = 0; pvNum < pvMoves; ++pvNum) {
-				printf(" %s",PrMove(pos->PvArray[pvNum]));
-			}
-			printf("\n");
-		}
 	}
-	
-	if(info->GAME_MODE == UCIMODE) {
-		printf("bestmove %s\n",PrMove(bestMove));
-	} else if(info->GAME_MODE == XBOARDMODE) {		
-		printf("move %s\n",PrMove(bestMove));
-		MakeMove(pos, bestMove);
-	} else {	
-		printf("\n\n***!! Vice makes move %s !!***\n\n",PrMove(bestMove));
-		MakeMove(pos, bestMove);
-		PrintBoard(pos);
-	}
-	
+
 }
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 
 	int pce,index,t_sq,dir;
 	
-	// pawns
+	// pawn
 	if(side == WHITE) {
 		if(pos->pieces[sq-11] == wP || pos->pieces[sq-9] == wP) {
 			return TRUE;
@@ -1028,21 +1306,75 @@ int SqOnBoard(const int sq) {
 void StorePvMove(const S_BOARD *pos, const int move) {
 
 	int index = pos->posKey % pos->PvTable->numEntries;
-	ASSERT(index >= 0 && index <= pos->PvTable->numEntries - 1);
 	
 	pos->PvTable->pTable[index].move = move;
     pos->PvTable->pTable[index].posKey = pos->posKey;
 }
+void TakeMove(S_BOARD *pos) {
+	
+	
+	pos->hisPly--;
+    pos->ply--;
+	
+    int move = pos->history[pos->hisPly].move;
+    int from = FROMSQ(move);
+    int to = TOSQ(move);	
+	
+	
+	if(pos->enPas != NO_SQ) HASH_EP;
+    HASH_CA;
+
+    pos->castlePerm = pos->history[pos->hisPly].castlePerm;
+    pos->fiftyMove = pos->history[pos->hisPly].fiftyMove;
+    pos->enPas = pos->history[pos->hisPly].enPas;
+
+    if(pos->enPas != NO_SQ) HASH_EP;
+    HASH_CA;
+
+    pos->side ^= 1;
+    HASH_SIDE;
+	
+	if(MFLAGEP & move) {
+        if(pos->side == WHITE) {
+            AddPiece(to-10, pos, bP);
+        } else {
+            AddPiece(to+10, pos, wP);
+        }
+    } else if(MFLAGCA & move) {
+        switch(to) {
+            case C1: MovePiece(D1, A1, pos); break;
+            case C8: MovePiece(D8, A8, pos); break;
+            case G1: MovePiece(F1, H1, pos); break;
+            case G8: MovePiece(F8, H8, pos); break;
+            default: break;
+        }
+    }
+	
+	MovePiece(to, from, pos);
+	
+	if(PieceKing[pos->pieces[from]]) {
+        pos->KingSq[pos->side] = from;
+    }
+	
+	int captured = CAPTURED(move);
+    if(captured != EMPTY) {
+        AddPiece(to, pos, captured);
+    }
+	
+	if(PROMOTED(move) != EMPTY)   {
+        ClearPiece(from, pos);
+        AddPiece(from, pos, (PieceCol[PROMOTED(move)] == WHITE ? wP : bP));
+    }
+	
+}
 void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info) {
 
-	info->GAME_MODE = UCIMODE;
 	
 	setbuf(stdin, NULL);
     setbuf(stdout, NULL);
 	
 	char line[INPUTBUFFER];
     printf("id name %s\n",NAME);
-    printf("id author Bluefever\n");
     printf("uciok\n");    
 	
 	while (TRUE) {
@@ -1108,7 +1440,7 @@ void UpdateListsMaterial(S_BOARD *pos) {
 }
 int main()
 {
-AllInit();	
+	Init();	
 	
 	S_BOARD pos[1];
     	S_SEARCHINFO info[1];   
@@ -1130,15 +1462,7 @@ AllInit();
 			Uci_Loop(pos, info);
 			if(info->quit == TRUE) break;
 			continue;
-		} else if (!strncmp(line, "xboard",6))	{
-			XBoard_Loop(pos, info);
-			if(info->quit == TRUE) break;
-			continue;
-		} else if (!strncmp(line, "vice",4))	{
-			Console_Loop(pos, info);
-			if(info->quit == TRUE) break;
-			continue;
-		} else if(!strncmp(line, "quit",4))	{
+		}else if(!strncmp(line, "quit",4))	{
 			break;
 		}
 	}

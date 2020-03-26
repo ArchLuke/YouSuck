@@ -1,7 +1,9 @@
+
+#include "config.h"
+#include "stdlib.h"
+
 #ifndef DEFS_H
 #define DEFS_H
-
-#include "stdlib.h"
 
 typedef unsigned long long U64;
 
@@ -25,10 +27,52 @@ enum {
   A7 = 81, B7, C7, D7, E7, F7, G7, H7,
   A8 = 91, B8, C8, D8, E8, F8, G8, H8, NO_SQ, OFFBOARD
 };
-
+const int CastlePerm[120] = {
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 13, 15, 15, 15, 12, 15, 15, 14, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15,  7, 15, 15, 15,  3, 15, 15, 11, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15
+};
 enum { FALSE, TRUE };
 
 enum { WKCA = 1, WQCA = 2, BKCA = 4, BQCA = 8 };
+typedef struct {
+	int move;
+	int score;
+} S_MOVE;
+
+typedef struct {
+	S_MOVE moves[MAXPOSITIONMOVES];
+	int count;
+} S_MOVELIST;
+
+typedef struct {
+	U64 posKey;
+	int move;
+} S_PVENTRY;
+
+typedef struct {
+	S_PVENTRY *pTable;
+	int numEntries;
+} S_PVTABLE;
+
+typedef struct {
+	
+	int move;
+	int castlePerm;
+	int enPas;
+	int fiftyMove;
+	U64 posKey;
+
+} S_UNDO;
 
 typedef struct {
 
@@ -68,26 +112,6 @@ typedef struct {
 } S_BOARD;
 
 typedef struct {
-	int move;
-	int score;
-} S_MOVE;
-
-typedef struct {
-	S_MOVE moves[MAXPOSITIONMOVES];
-	int count;
-} S_MOVELIST;
-
-typedef struct {
-	U64 posKey;
-	int move;
-} S_PVENTRY;
-
-typedef struct {
-	S_PVENTRY *pTable;
-	int numEntries;
-} S_PVTABLE;
-
-typedef struct {
 
 	int starttime;
 	int stoptime;
@@ -102,22 +126,16 @@ typedef struct {
 	
 	float fh;
 	float fhf;
-	
+
 	int GAME_MODE;
 	int POST_THINKING;
 
-} S_SEARCHINFO;
+} S_SEARCHINFO;	
 
-typedef struct {
-	
-	int move;
-	int castlePerm;
-	int enPas;
-	int fiftyMove;
-	U64 posKey;
-
-} S_UNDO;
-
+#define HASH_CA (pos->posKey ^= (CastleKeys[(pos->castlePerm)]))
+#define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
+#define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
+#define HASH_SIDE (pos->posKey ^= (SideKey))
 #define INFINITE 30000
 #define INPUTBUFFER 400 * 6
 #define MATE 29000
@@ -301,11 +319,15 @@ void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) ;
 void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
+void AddPiece(const int sq, S_BOARD *pos, const int pce);
 void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull);
+void CheckUp(S_SEARCHINFO *info);
 void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
+void ClearPiece(const int sq, S_BOARD *pos);
 void ClearPvTable(S_PVTABLE *table);
 int CountBits(U64 b);
+int EvalPosition(const S_BOARD *pos);
 int FileRankValid(const int fr);
 void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 U64 GeneratePosKey(const S_BOARD *pos);
@@ -318,11 +340,15 @@ void InitHashKeys();
 int InitMvvLva();
 void InitPvTable(S_PVTABLE *table);
 void InitSq120To64();
+int InputWaiting();
 int IsRepetition(const S_BOARD *pos);
+int MakeMove(S_BOARD *pos, int move);
 int MoveExists(S_BOARD *pos, const int move);
+void MovePiece(const int from, const int to, S_BOARD *pos);
 int ParseFen(char *fen, S_BOARD *pos);
 void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos);
 void ParsePosition(char* lineIn, S_BOARD *pos);
+int ParseMove(char *ptrChar, S_BOARD *pos);
 void PickNextMove(int moveNum, S_MOVELIST *list);
 int PieceValid(const int pce);
 int PieceValidEmpty(const int pce);
@@ -332,12 +358,14 @@ int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
 int ProbePvTable(const S_BOARD *pos);
 int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
+void ReadInput(S_SEARCHINFO *info);
 void ResetBoard(S_BOARD *pos); 
 void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
 int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 int SideValid(const int side);
 int SqOnBoard(const int sq);
 void StorePvMove(const S_BOARD *pos, const int move);
+void TakeMove(S_BOARD *pos);
 void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info);
 void UpdateListsMaterial(S_BOARD *pos);
-
+#endif
