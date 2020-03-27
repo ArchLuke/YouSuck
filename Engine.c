@@ -82,12 +82,11 @@ void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 	}
 	list->count++;
 }
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
+int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) {
 
 	
 	if(depth == 0) {
 		return Quiescence(alpha, beta, pos, info);
-		// return EvalPosition(pos);
 	}
 	
 	if(( info->nodes & 2047 ) == 0) {
@@ -96,18 +95,12 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, 
 		
 	info->nodes++;
 	
-	if((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply) {	
+	if((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply) {
 		return 0;
 	}
 	
 	if(pos->ply > MAXDEPTH - 1) {
 		return EvalPosition(pos);
-	}
-	
-	int InCheck = SqAttacked(pos->KingSq[pos->side],pos->side^1,pos);
-	
-	if(InCheck == TRUE) {
-		depth++;
 	}
 	
 	S_MOVELIST list[1];
@@ -118,9 +111,9 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, 
 	int OldAlpha = alpha;
 	int BestMove = NOMOVE;
 	int Score = -INFINITE;
-	int PvMove = ProbePvTable(pos);	
+	int PvMove = ProbePvTable(pos);
 	
-	if( PvMove != NOMOVE) {
+	if( PvMove != NOMOVE ) {
 		for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {
 			if( list->moves[MoveNum].move == PvMove) {
 				list->moves[MoveNum].score = 2000000;
@@ -138,8 +131,8 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, 
         }
         
 		Legal++;
-		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE);
-		TakeMove(pos);
+		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info);		
+        TakeMove(pos);
 		
 		if(info->stopped == TRUE) {
 			return 0;
@@ -168,7 +161,7 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, 
     }
 	
 	if(Legal == 0) {
-		if(InCheck) {
+		if(SqAttacked(pos->KingSq[pos->side],pos->side^1,pos)) {
 			return -MATE + pos->ply;
 		} else {
 			return 0;
@@ -331,8 +324,8 @@ int EvalPosition(const S_BOARD *pos) {
 }
 int FileRankValid(const int fr) {
 	return (fr >= 0 && fr <= 7) ? 1 : 0;
-}
-void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
+}void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
+	
 	
 	list->count = 0;	
 	
@@ -343,51 +336,99 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 	int dir = 0;
 	int index = 0;
 	int pceIndex = 0;
-
+	
+	if(side == WHITE) {
 		
-	for(pceNum = 0; pceNum < pos->pceNum[side?bP:wP]; ++pceNum) {
-		sq = side? pos->pList[bP][pceNum] : pos->pList[wP][pceNum];
-		
-		if(pos->pieces[sq + side? -10:10] == EMPTY && !cap_only) {
-			AddPawnMove(pos, sq, sq-10, list);
-			AddPawnMove(pos, sq, sq+10, list);
-			if(RanksBrd[sq] == (side? RANK_7:RANK_2) && pos->pieces[sq + (side?-20:20)] == EMPTY) {
-				AddQuietMove(pos, MOVE(sq,(sq+side?-20:20),EMPTY,EMPTY,MFLAGPS),list);
-			}
-		} 
-		
-		if(!SQOFFBOARD(sq + (side?-9:9)) && PieceCol[pos->pieces[sq + (side?-9:9)]] == BLACK) {
-			AddPawnCapMove(pos, sq, sq+(side?-9:9), pos->pieces[sq + (side?-9:9)], list);
-		}  
-		if(!SQOFFBOARD(sq + (side?-11:11)) && PieceCol[pos->pieces[sq + (side?-11:11)]] == BLACK) {
-			AddPawnCapMove(pos, sq, sq+(side?-11:11), pos->pieces[sq + (side?-11:11)], list);
-		} 
-		
-		if(pos->enPas != NO_SQ) {
-			if(sq + (side?-9:9) == pos->enPas) {
-				AddEnPassantMove(pos, MOVE(sq,sq + (side?-9:9),EMPTY,EMPTY,MFLAGEP), list);
+		for(pceNum = 0; pceNum < pos->pceNum[wP]; ++pceNum) {
+			sq = pos->pList[wP][pceNum];
+			
+			if(pos->pieces[sq + 10] == EMPTY && !cap_only) {
+				AddPawnMove(pos, sq, sq+10, list);
+				if(RanksBrd[sq] == RANK_2 && pos->pieces[sq + 20] == EMPTY) {
+					AddQuietMove(pos, MOVE(sq,(sq+20),EMPTY,EMPTY,MFLAGPS),list);
+				}
 			} 
-			if(sq + (side?-11:11) == pos->enPas) {
-				AddEnPassantMove(pos, MOVE(sq,sq + (side?-11:11),EMPTY,EMPTY,MFLAGEP), list);
+			
+			if(!SQOFFBOARD(sq + 9) && PieceCol[pos->pieces[sq + 9]] == BLACK) {
+				AddPawnCapMove(pos, sq, sq+9, pos->pieces[sq + 9], list);
+			}  
+			if(!SQOFFBOARD(sq + 11) && PieceCol[pos->pieces[sq + 11]] == BLACK) {
+				AddPawnCapMove(pos, sq, sq+11, pos->pieces[sq + 11], list);
+			} 
+			
+			if(pos->enPas != NO_SQ) {
+				if(sq + 9 == pos->enPas) {
+					AddEnPassantMove(pos, MOVE(sq,sq + 9,EMPTY,EMPTY,MFLAGEP), list);
+				} 
+				if(sq + 11 == pos->enPas) {
+					AddEnPassantMove(pos, MOVE(sq,sq + 11,EMPTY,EMPTY,MFLAGEP), list);
+				}
 			}
 		}
-	}
 		
-	if(pos->castlePerm & (side?BKCA:WKCA) && !cap_only) {
-		if(pos->pieces[(side?F8:F1)] == EMPTY && pos->pieces[(side?G8:G1)] == EMPTY) {
-			if(!SqAttacked((side?E8:E1),(side?WHITE:BLACK),pos) && !SqAttacked((side?F8:F1),(side?WHITE:BLACK),pos)) {
-				AddQuietMove(pos, MOVE((side?E8:E1), (side?G8:G1), EMPTY, EMPTY, MFLAGCA), list);
+		if(pos->castlePerm & WKCA && !cap_only) {
+			if(pos->pieces[F1] == EMPTY && pos->pieces[G1] == EMPTY) {
+				if(!SqAttacked(E1,BLACK,pos) && !SqAttacked(F1,BLACK,pos) ) {
+					AddQuietMove(pos, MOVE(E1, G1, EMPTY, EMPTY, MFLAGCA), list);
+				}
+			}
+		}
+		
+		if(pos->castlePerm & WQCA & !cap_only) {
+			if(pos->pieces[D1] == EMPTY && pos->pieces[C1] == EMPTY && pos->pieces[B1] == EMPTY) {
+				if(!SqAttacked(E1,BLACK,pos) && !SqAttacked(D1,BLACK,pos) ) {
+					AddQuietMove(pos, MOVE(E1, C1, EMPTY, EMPTY, MFLAGCA), list);
+				}
+			}
+		}
+		
+	} else {
+		
+		for(pceNum = 0; pceNum < pos->pceNum[bP]; ++pceNum) {
+			sq = pos->pList[bP][pceNum];
+			
+			if(pos->pieces[sq - 10] == EMPTY && !cap_only) {
+				AddPawnMove(pos, sq, sq-10, list);
+				if(RanksBrd[sq] == RANK_7 && pos->pieces[sq - 20] == EMPTY) {
+					AddQuietMove(pos, MOVE(sq,(sq-20),EMPTY,EMPTY,MFLAGPS),list);
+				}
+			} 
+			
+			if(!SQOFFBOARD(sq - 9) && PieceCol[pos->pieces[sq - 9]] == WHITE) {
+				AddPawnCapMove(pos, sq, sq-9, pos->pieces[sq - 9], list);
+			} 
+			
+			if(!SQOFFBOARD(sq - 11) && PieceCol[pos->pieces[sq - 11]] == WHITE) {
+				AddPawnCapMove(pos, sq, sq-11, pos->pieces[sq - 11], list);
+			} 
+			if(pos->enPas != NO_SQ) {
+				if(sq - 9 == pos->enPas) {
+					AddEnPassantMove(pos, MOVE(sq,sq - 9,EMPTY,EMPTY,MFLAGEP), list);
+				} 
+				if(sq - 11 == pos->enPas) {
+					AddEnPassantMove(pos, MOVE(sq,sq - 11,EMPTY,EMPTY,MFLAGEP), list);
+				}
+			}
+		}		
+		
+		// castling
+		if(pos->castlePerm &  BKCA && !cap_only) {
+			if(pos->pieces[F8] == EMPTY && pos->pieces[G8] == EMPTY) {
+				if(!SqAttacked(E8,WHITE,pos) && !SqAttacked(F8,WHITE,pos) ) {
+					AddQuietMove(pos, MOVE(E8, G8, EMPTY, EMPTY, MFLAGCA), list);
+				}
+			}
+		}
+		
+		if(pos->castlePerm &  BQCA && !cap_only) {
+			if(pos->pieces[D8] == EMPTY && pos->pieces[C8] == EMPTY && pos->pieces[B8] == EMPTY) {
+				if(!SqAttacked(E8,WHITE,pos) && !SqAttacked(D8,WHITE,pos) ) {
+					AddQuietMove(pos, MOVE(E8, C8, EMPTY, EMPTY, MFLAGCA), list);
+				}
 			}
 		}
 	}
-	if(pos->castlePerm & (side?BQCA:WQCA) && !cap_only) {
-		if(pos->pieces[(side?D8:D1)] == EMPTY && pos->pieces[(side?C8:C1)] == EMPTY && pos->pieces[(side?B8:B1)]==EMPTY) {
-			if(!SqAttacked((side?E8:E1),(side?WHITE:BLACK),pos) && !SqAttacked((side?F8:F1),(side?WHITE:BLACK),pos)) {
-				AddQuietMove(pos, MOVE((side?E8:E1), (side?C8:C1), EMPTY, EMPTY, MFLAGCA), list);
-			}
-		}
-	}
-				
+	
 	/* Loop for slide pieces */
 	pceIndex = LoopSlideIndex[side];
 	pce = LoopSlidePce[pceIndex++];
@@ -407,8 +448,9 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 							AddCaptureMove(pos, MOVE(sq, t_sq, pos->pieces[t_sq], EMPTY, 0), list);
 						}
 						break;
-					}	
-					AddQuietMove(pos, MOVE(sq, t_sq, EMPTY, EMPTY, 0), list);
+					}
+					if (!cap_only)	
+						AddQuietMove(pos, MOVE(sq, t_sq, EMPTY, EMPTY, 0), list);
 					t_sq += dir;
 				}
 			}
@@ -441,13 +483,17 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 					}
 					continue;
 				}	
-				AddQuietMove(pos, MOVE(sq, t_sq, EMPTY, EMPTY, 0), list);
+				if (!cap_only)
+					AddQuietMove(pos, MOVE(sq, t_sq, EMPTY, EMPTY, 0), list);
 			}
 		}
 				
 		pce = LoopNonSlidePce[pceIndex++];
 	}
 }
+
+
+
 U64 GeneratePosKey(const S_BOARD *pos) {
 
 	int sq = 0;
@@ -631,9 +677,11 @@ int IsRepetition(const S_BOARD *pos) {
 	return FALSE;
 }
 int MakeMove(S_BOARD *pos, int move) {
+
 	int from = FROMSQ(move);
-    	int to = TOSQ(move);
-    	int side = pos->side;
+    int to = TOSQ(move);
+    int side = pos->side;
+	
 	pos->history[pos->hisPly].posKey = pos->posKey;
 	
 	if(move & MFLAGEP) {
@@ -957,9 +1005,10 @@ void ParsePosition(char* lineIn, S_BOARD *pos) {
               ptrChar++;
         }
     }
+	PrintBoard(pos);	
 }
 int ParseMove(char *ptrChar, S_BOARD *pos) {
-
+	printf("move to parse is %s", ptrChar);
 	if(ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
     if(ptrChar[3] > '8' || ptrChar[3] < '1') return NOMOVE;
     if(ptrChar[0] > 'h' || ptrChar[0] < 'a') return NOMOVE;
@@ -967,9 +1016,10 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
 
     int from = FR2SQ(ptrChar[0] - 'a', ptrChar[1] - '1');
     int to = FR2SQ(ptrChar[2] - 'a', ptrChar[3] - '1');	
+    printf("from square is %d to square is %d", from, to);
 	
 	
-	S_MOVELIST list[1];
+    S_MOVELIST list[1];
     GenerateAllMoves(pos,list,0);      
     int MoveNum = 0;
 	int Move = 0;
@@ -978,6 +1028,7 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
 	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
 		Move = list->moves[MoveNum].move;
 		if(FROMSQ(Move)==from && TOSQ(Move)==to) {
+			printf("matched \n");
 			PromPce = PROMOTED(Move);
 			if(PromPce!=EMPTY) {
 				if(IsRQ(PromPce) && !IsBQ(PromPce) && ptrChar[4]=='r') {
@@ -994,7 +1045,7 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
 			return Move;
 		}
     }
-	
+printf("returned a move\n");	
     return NOMOVE;	
 }
 void PickNextMove(int moveNum, S_MOVELIST *list) {
@@ -1051,6 +1102,63 @@ void PrintBitBoard(U64 bb) {
 		printf("\n");
 	}  
     printf("\n\n");
+}
+void PrintBoard(const S_BOARD *pos) {
+	
+	int sq,file,rank,piece;
+
+	printf("\nGame Board:\n\n");
+	
+	for(rank = RANK_8; rank >= RANK_1; rank--) {
+		printf("%d  ",rank+1);
+		for(file = FILE_A; file <= FILE_H; file++) {
+			sq = FR2SQ(file,rank);
+			piece = pos->pieces[sq];
+			printf("%3c",PceChar[piece]);
+		}
+		printf("\n");
+	}
+	
+	printf("\n   ");
+	for(file = FILE_A; file <= FILE_H; file++) {
+		printf("%3c",'a'+file);	
+	}
+	printf("\n");
+	printf("side:%c\n",SideChar[pos->side]);
+	printf("enPas:%d\n",pos->enPas);
+	printf("castle:%c%c%c%c\n",
+			pos->castlePerm & WKCA ? 'K' : '-',
+			pos->castlePerm & WQCA ? 'Q' : '-',
+			pos->castlePerm & BKCA ? 'k' : '-',
+			pos->castlePerm & BQCA ? 'q' : '-'	
+			);
+	printf("PosKey:%llX\n",pos->posKey);
+}
+char *PrMove(const int move) {
+
+	static char MvStr[6];
+	
+	int ff = FilesBrd[FROMSQ(move)];
+	int rf = RanksBrd[FROMSQ(move)];
+	int ft = FilesBrd[TOSQ(move)];
+	int rt = RanksBrd[TOSQ(move)];
+	
+	int promoted = PROMOTED(move);
+	
+	if(promoted) {
+		char pchar = 'q';
+		if(IsKn(promoted)) {
+			pchar = 'n';
+		} else if(IsRQ(promoted) && !IsBQ(promoted))  {
+			pchar = 'r';
+		} else if(!IsRQ(promoted) && IsBQ(promoted))  {
+			pchar = 'b';
+		}
+		sprintf(MvStr, "%c%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt), pchar);
+	} else {
+		sprintf(MvStr, "%c%c%c%c", ('a'+ff), ('1'+rf), ('a'+ft), ('1'+rt));
+	}
+	return MvStr;
 }
 int ProbePvTable(const S_BOARD *pos) {
 
@@ -1217,8 +1325,7 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	// iterative deepening
 	for( currentDepth = 1; currentDepth <= info->depth; ++currentDepth ) {
 							// alpha	 beta
-		rootDepth = currentDepth;
-		bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info, TRUE);
+		bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info);
 		
 		if(info->stopped == TRUE) {
 			break;
@@ -1226,7 +1333,20 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 		
 		pvMoves = GetPvLine(currentDepth, pos);
 		bestMove = pos->PvArray[0];
+		
+		printf("info score cp %d depth %d nodes %ld time %d ",
+			bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
+			
+		pvMoves = GetPvLine(currentDepth, pos);	
+		printf("pv");		
+		for(pvNum = 0; pvNum < pvMoves; ++pvNum) {
+			printf(" %s",PrMove(pos->PvArray[pvNum]));
+		}
+		printf("\n");
+		// printf("Ordering:%.2f\n",(info->fhf/info->fh));
 	}
+	//info score cp 13  depth 1 nodes 13 time 15 pv f1b5
+	printf("bestmove %s\n",PrMove(bestMove));	
 
 }
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
@@ -1367,15 +1487,20 @@ void TakeMove(S_BOARD *pos) {
     }
 	
 }
-void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info) {
-
+void Uci_Loop() {
 	
 	setbuf(stdin, NULL);
     setbuf(stdout, NULL);
 	
 	char line[INPUTBUFFER];
     printf("id name %s\n",NAME);
-    printf("uciok\n");    
+    printf("id author Kong\n");
+    printf("uciok\n");	
+	
+    S_BOARD pos[1];
+    ParseFen(START_FEN, pos);
+    S_SEARCHINFO info[1];   
+    InitPvTable(pos->PvTable);
 	
 	while (TRUE) {
 		memset(&line[0], 0, sizeof(line));
@@ -1405,6 +1530,7 @@ void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info) {
         }
 		if(info->quit) break;
     }
+	free(pos->PvTable->pTable);
 }
 void UpdateListsMaterial(S_BOARD *pos) {	
 	
@@ -1442,33 +1568,7 @@ int main()
 {
 	Init();	
 	
-	S_BOARD pos[1];
-    	S_SEARCHINFO info[1];   
-	pos->PvTable->pTable = NULL;
-    	InitPvTable(pos->PvTable);
-	setbuf(stdin, NULL);
- 	setbuf(stdout, NULL);
-	
-	char line[256];
-	while (TRUE) {
-		memset(&line[0], 0, sizeof(line));
-
-		fflush(stdout);
-		if (!fgets(line, 256, stdin))
-			continue;
-		if (line[0] == '\n')
-			continue;
-		if (!strncmp(line, "uci",3)) {			
-			Uci_Loop(pos, info);
-			if(info->quit == TRUE) break;
-			continue;
-		}else if(!strncmp(line, "quit",4))	{
-			break;
-		}
-	}
-	
-	free(pos->PvTable->pTable);
-
 //uci loop
+	Uci_Loop();
 	return 0;
 }

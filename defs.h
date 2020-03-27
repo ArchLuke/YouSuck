@@ -321,7 +321,7 @@ void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int
 void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 void AddPiece(const int sq, S_BOARD *pos, const int pce);
 void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull);
+int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info);
 void CheckUp(S_SEARCHINFO *info);
 void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 void ClearPiece(const int sq, S_BOARD *pos);
@@ -354,6 +354,8 @@ int PieceValid(const int pce);
 int PieceValidEmpty(const int pce);
 int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
+void PrintBoard(const S_BOARD *pos);
+char * PrMove(const int move);
 int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
 int ProbePvTable(const S_BOARD *pos);
@@ -366,6 +368,6 @@ int SideValid(const int side);
 int SqOnBoard(const int sq);
 void StorePvMove(const S_BOARD *pos, const int move);
 void TakeMove(S_BOARD *pos);
-void Uci_Loop(S_BOARD *pos, S_SEARCHINFO *info);
+void Uci_Loop();
 void UpdateListsMaterial(S_BOARD *pos);
 #endif
