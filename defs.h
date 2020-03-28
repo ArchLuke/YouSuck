@@ -80,6 +80,7 @@ typedef struct {
 	U64 pawns[3];
 		
 	int KingSq[2];
+	int isCastled[2];
 	
 	int side;
 	int enPas;
@@ -196,6 +197,8 @@ const int BishopTable[64] = {
 0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
+const int Castled=40;
+const int DoubledPawns=-5;
 const int KnightTable[64] = {
 0	,	-10	,	0	,	0	,	0	,	0	,	-10	,	0	,
 0	,	0	,	0	,	5	,	5	,	0	,	0	,	0	,
@@ -241,6 +244,7 @@ const int RookTable[64] = {
 };
 const int RookOpenFile = 5;
 
+
 const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
 const int KnDir[8] = { -8, -19,	-21, -12, 8, 19, 21, 12 };
@@ -284,13 +288,18 @@ const int PceDir[13][8] = {
 };
 const int VictimScore[13] = { 0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600 };
 
+U64 BlackPassedMask[64];
 U64 CastleKeys[16];
 U64 ClearMask[64];
+U64 FileBBMask[8];
+U64 IsolatedMask[64];
 U64 PieceKeys[13][120];
+U64 RankBBMask[8];
 U64 SetMask[64];
 U64 SideKey;
 int Sq64ToSq120[64];
 int Sq120ToSq64[BRD_SQ_NUM];
+U64 WhitePassedMask[64];
 
 char FileChar[] = "abcdefgh";
 char PceChar[] = ".PNBRQKpnbrqk";
@@ -342,6 +351,7 @@ int GetPvLine(const int depth, S_BOARD *pos);
 int GetTimeMs();
 void Init();
 void InitBitMasks();
+void InitEvalMasks();
 void InitFilesRanksBrd();
 void InitHashKeys();
 int InitMvvLva();

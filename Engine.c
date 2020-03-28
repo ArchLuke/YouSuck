@@ -291,19 +291,85 @@ int EvalPosition(const S_BOARD *pos) {
 	int pce;
 	int pceNum;
 	int sq;
+	int sqTable[64]={0};
+	int doubledPawns[64]={0};
 	int score = pos->material[WHITE] - pos->material[BLACK];
-	
+
+	if(pos->isCastled[WHITE])
+		score += Castled;
+	if(pos->isCastled[BLACK])
+		score -= Castled;
+			
 	pce = wP;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
-		score += PawnTable[SQ64(sq)];
-	}	
+		sqTable[SQ64(sq)]=TRUE;
+		score += PawnTable[SQ64(sq)];	
+		
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			score += PawnIsolated;
+		}
+		
+		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			score += PawnPassed[RanksBrd[sq]];
+		}
+		int square;
+		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
+		{
+			square=SQ64(sq+10*(i-RanksBrd[sq]));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score += DoubledPawns;
+			}
+		}
+		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
+		{
+			int square=SQ64(sq-10*(RanksBrd[sq]-i));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score += DoubledPawns;
+			}
+		}
 
+	}
+	memset(sqTable, 0, 64);	
 	pce = bP;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
-		score -= PawnTable[MIRROR64(SQ64(sq))];
-	}	
+		sqTable[SQ64(sq)]=TRUE;
+		score -= PawnTable[MIRROR64(SQ64(sq))];	
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			score -= PawnIsolated;
+		}
+		
+		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			score -= PawnPassed[7 - RanksBrd[sq]];
+		}
+		int square;
+		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
+		{
+			square=SQ64(sq+10*(i-RanksBrd[sq]));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score -= DoubledPawns;
+			}
+		}
+		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
+		{
+			int square=SQ64(sq-10*(RanksBrd[sq]-i));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score -= DoubledPawns;
+			}
+		}
+
+	}		
 	
 	pce = wN;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
@@ -583,6 +649,7 @@ void Init() {
 	InitHashKeys();
 	InitFilesRanksBrd();
 	InitMvvLva();
+	InitEvalMasks();
 }
 
 
@@ -598,6 +665,76 @@ void InitBitMasks() {
 		SetMask[index] |= (1ULL << index);
 		ClearMask[index] = ~SetMask[index];
 	}
+}
+void InitEvalMasks() {
+
+	int sq, tsq, r, f;
+	
+	for(sq = 0; sq < 8; ++sq) {		
+        FileBBMask[sq] = 0ULL; 
+		RankBBMask[sq] = 0ULL; 
+	}
+	
+	for(r = RANK_8; r >= RANK_1; r--) {
+        for (f = FILE_A; f <= FILE_H; f++) {
+            sq = r * 8 + f;
+            FileBBMask[f] |= (1ULL << sq);
+            RankBBMask[r] |= (1ULL << sq);
+        }
+	}
+	
+	for(sq = 0; sq < 64; ++sq) {
+		IsolatedMask[sq] = 0ULL; 
+		WhitePassedMask[sq] = 0ULL; 
+		BlackPassedMask[sq] = 0ULL;
+    }
+
+	for(sq = 0; sq < 64; ++sq) {
+		tsq = sq + 8;
+			
+		while(tsq < 64) {
+		    WhitePassedMask[sq] |= (1ULL << tsq);
+		    tsq += 8;
+		}
+
+		tsq = sq - 8;
+		while(tsq >= 0) {
+		    BlackPassedMask[sq] |= (1ULL << tsq);
+		    tsq -= 8;
+		}
+
+		if(FilesBrd[SQ120(sq)] > FILE_A) {
+		    IsolatedMask[sq] |= FileBBMask[FilesBrd[SQ120(sq)] - 1];
+
+		    tsq = sq + 7;
+		    while(tsq < 64) {
+			WhitePassedMask[sq] |= (1ULL << tsq);
+			tsq += 8;
+		    }
+
+		    tsq = sq - 9;
+		    while(tsq >= 0) {
+			BlackPassedMask[sq] |= (1ULL << tsq);
+			tsq -= 8;
+		    }
+		}
+			
+		if(FilesBrd[SQ120(sq)] < FILE_H) {
+		    IsolatedMask[sq] |= FileBBMask[FilesBrd[SQ120(sq)] + 1];
+
+		    tsq = sq + 9;
+		    while(tsq < 64) {
+			WhitePassedMask[sq] |= (1ULL << tsq);
+			tsq += 8;
+		    }
+
+		    tsq = sq - 7;
+		    while(tsq >= 0) {
+			BlackPassedMask[sq] |= (1ULL << tsq);
+			tsq -= 8;
+		    }
+		}
+	}	
 }
 void InitFilesRanksBrd() {
 	
@@ -710,12 +847,16 @@ int MakeMove(S_BOARD *pos, int move) {
 	pos->history[pos->hisPly].posKey = pos->posKey;
 	
 	if(move & MFLAGEP) {
-        if(side == WHITE) {
-            ClearPiece(to-10,pos);
-        } else {
+        if(side) {
             ClearPiece(to+10,pos);
+        } else {
+            ClearPiece(to-10,pos);
         }
     } else if (move & MFLAGCA) {
+	if(side)
+		pos->isCastled[BLACK]=TRUE;
+	else
+		pos->isCastled[WHITE]=TRUE;
         switch(to) {
             case C1:
                 MovePiece(A1, D1, pos);
@@ -1164,22 +1305,82 @@ void PrintPositionalEvals(S_BOARD *pos)
 	int pce;
 	int pceNum;
 	int sq;
+	int sqTable[64]={0};
+	int doubledPawns[64]={0};
 	int score = 0;	
-
 	pce = wP;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
-		score += PawnTable[SQ64(sq)];
-	}	
-	printf("White Pawn score is %d \n", score);
+		sqTable[SQ64(sq)]=TRUE;
+		
+		score += PawnTable[SQ64(sq)];	
+		
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			score += PawnIsolated;
+		}
+		
+		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			score += PawnPassed[RanksBrd[sq]];
+		}
+		int square;
+		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
+		{
+			square=SQ64(sq+10*(i-RanksBrd[sq]));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score += DoubledPawns;
+			}
+		}
+		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
+		{
+			int square=SQ64(sq-10*(RanksBrd[sq]-i));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score += DoubledPawns;
+			}
+		}
+	}
+	printf("White pawn score is %d\n", score);
 
+	memset(sqTable, 0, 64);	
 	pce = bP;
 	score=0;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
-		score -= PawnTable[MIRROR64(SQ64(sq))];
+		sqTable[SQ64(sq)]=TRUE;
+		score -= PawnTable[MIRROR64(SQ64(sq))];	
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			score -= PawnIsolated;
+		}
+		
+		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			score -= PawnPassed[7 - RanksBrd[sq]];
+		}
+		int square;
+		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
+		{
+			square=SQ64(sq+10*(i-RanksBrd[sq]));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score -= DoubledPawns;
+			}
+		}
+		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
+		{
+			int square=SQ64(sq-10*(RanksBrd[sq]-i));
+			if (sqTable[square] && !doubledPawns[SQ64(sq)])
+			{
+				doubledPawns[square]=TRUE;
+				score -= DoubledPawns;
+			}
+		}
 	}	
-	printf("Black Pawn score is %d \n", score);
+	printf("Black pawn score is %d\n", score);
 
 	pce = wN;	
 	score=0;
