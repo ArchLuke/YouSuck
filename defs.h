@@ -137,7 +137,7 @@ typedef struct {
 #define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
 #define HASH_SIDE (pos->posKey ^= (SideKey))
 #define INFINITE 30000
-#define INPUTBUFFER 400 * 6
+#define INPUTBUFFER 256
 #define MATE 29000
 
 /* GAME MOVE */
@@ -227,8 +227,8 @@ const int PawnTable[64] = {
 20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-
-
+const int PawnIsolated = -10;
+const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
 const int RookTable[64] = {
 0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
 0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
@@ -239,7 +239,7 @@ const int RookTable[64] = {
 25	,	25	,	25	,	25	,	25	,	25	,	25	,	25	,
 0	,	0	,	5	,	10	,	10	,	5	,	0	,	0		
 };
-
+const int RookOpenFile = 5;
 
 const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
@@ -296,6 +296,7 @@ char FileChar[] = "abcdefgh";
 char PceChar[] = ".PNBRQKpnbrqk";
 char RankChar[] = "12345678";
 char SideChar[] = "wb-";
+
 int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
 int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
@@ -303,20 +304,25 @@ int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE,
 int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
 int PieceVal[13]= { 0, 100, 325, 325, 550, 1000, 50000, 100, 325, 325, 550, 1000, 50000  };
+
 int FilesBrd[BRD_SQ_NUM];
 int RanksBrd[BRD_SQ_NUM];
+
 int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
 int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
 int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
 int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
 int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
 
+char *line;
 const int PvSize = 0x100000 * 2;
 int rootDepth;
+S_BOARD pos[1];
+S_SEARCHINFO info[1];
 
 /* FUNCTIONS */
 void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list );
+void AddEnPassantMoe( const S_BOARD *pos, int move, S_MOVELIST *list );
 void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) ;
 void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 void AddPiece(const int sq, S_BOARD *pos, const int pce);
@@ -326,6 +332,7 @@ void CheckUp(S_SEARCHINFO *info);
 void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 void ClearPiece(const int sq, S_BOARD *pos);
 void ClearPvTable(S_PVTABLE *table);
+void Console_Loop();
 int CountBits(U64 b);
 int EvalPosition(const S_BOARD *pos);
 int FileRankValid(const int fr);
@@ -355,6 +362,7 @@ int PieceValidEmpty(const int pce);
 int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
 void PrintBoard(const S_BOARD *pos);
+void PrintPositionalEvals(S_BOARD *pos);
 char * PrMove(const int move);
 int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);

@@ -256,6 +256,31 @@ void ClearPvTable(S_PVTABLE *table) {
     pvEntry->move = NOMOVE;
   }
 }
+void Console_Loop()
+{
+	printf("mode is console\n");
+	while(1)
+	{
+		memset(line, 0, sizeof(line));
+
+		fgets(line, INPUTBUFFER, stdin);
+		if(strncmp(line, "fen", 3)==0)
+		{
+			line += 4;
+			ParseFen(line, pos);	
+		}else if (strncmp(line, "go", 2)==0)
+		{
+			ParseGo(line, info, pos);
+		}else if (strncmp(line, "eval", 4)==0)
+		{
+			PrintPositionalEvals(pos);		
+		}else if(strncmp(line, "q", 1)==0)
+		{
+			info->quit=TRUE;
+			break;		
+		}
+	}
+}
 int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
@@ -1134,6 +1159,81 @@ void PrintBoard(const S_BOARD *pos) {
 			);
 	printf("PosKey:%llX\n",pos->posKey);
 }
+void PrintPositionalEvals(S_BOARD *pos)
+{
+	int pce;
+	int pceNum;
+	int sq;
+	int score = 0;	
+
+	pce = wP;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += PawnTable[SQ64(sq)];
+	}	
+	printf("White Pawn score is %d \n", score);
+
+	pce = bP;
+	score=0;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= PawnTable[MIRROR64(SQ64(sq))];
+	}	
+	printf("Black Pawn score is %d \n", score);
+
+	pce = wN;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += KnightTable[SQ64(sq)];
+
+	}	
+	printf("White Knight score is %d \n", score);
+
+	pce = bN;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= KnightTable[MIRROR64(SQ64(sq))];
+
+	}			
+	printf("Black knight score is %d \n", score);
+
+	pce = wB;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += BishopTable[SQ64(sq)];
+	}	
+	printf("White bishop score is %d \n", score);
+
+	pce = bB;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= BishopTable[MIRROR64(SQ64(sq))];
+
+	}	
+	printf("Black bishop score is %d \n", score);
+
+	pce = wR;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += RookTable[SQ64(sq)];
+
+	}	
+	printf("White rook score is %d \n", score);
+
+	pce = bR;	
+	score=0;
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= RookTable[MIRROR64(SQ64(sq))];
+
+	}
+	printf("Black rook score is %d \n", score);
+}
 char *PrMove(const int move) {
 
 	static char MvStr[6];
@@ -1252,10 +1352,10 @@ int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 	return alpha;
 }
 void ReadInput(S_SEARCHINFO *info) {
-  int             bytes;
-  char            input[256] = "", *endc;
+	int bytes;
+  	char input[256] = "", *endc;
 
-    if (InputWaiting()) {    
+  	if (InputWaiting()) {    
 		info->stopped = TRUE;
 		do {
 		  bytes=read(fileno(stdin),input,256);
@@ -1269,7 +1369,7 @@ void ReadInput(S_SEARCHINFO *info) {
 			}
 		}
 		return;
-    }
+    	}
 }
 void ResetBoard(S_BOARD *pos) {
 
@@ -1489,47 +1589,30 @@ void TakeMove(S_BOARD *pos) {
 }
 void Uci_Loop() {
 	
-	setbuf(stdin, NULL);
-    setbuf(stdout, NULL);
-	
-	char line[INPUTBUFFER];
-    printf("id name %s\n",NAME);
-    printf("id author Kong\n");
-    printf("uciok\n");	
-	
-    S_BOARD pos[1];
-    ParseFen(START_FEN, pos);
-    S_SEARCHINFO info[1];   
-    InitPvTable(pos->PvTable);
-	
 	while (TRUE) {
 		memset(&line[0], 0, sizeof(line));
-        fflush(stdout);
-        if (!fgets(line, INPUTBUFFER, stdin))
-        continue;
+		if (!fgets(line, INPUTBUFFER, stdin))
+		continue;
 
-        if (line[0] == '\n')
-        continue;
+		if (line[0] == '\n')
+		continue;
 
-        if (!strncmp(line, "isready", 7)) {
-            printf("readyok\n");
-            continue;
-        } else if (!strncmp(line, "position", 8)) {
-            ParsePosition(line, pos);
-        } else if (!strncmp(line, "ucinewgame", 10)) {
-            ParsePosition("position startpos\n", pos);
-        } else if (!strncmp(line, "go", 2)) {
-            ParseGo(line, info, pos);
-        } else if (!strncmp(line, "quit", 4)) {
-            info->quit = TRUE;
-            break;
-        } else if (!strncmp(line, "uci", 3)) {
-            printf("id name %s\n",NAME);
-            printf("id author Bluefever\n");
-            printf("uciok\n");
-        }
+		if (!strncmp(line, "isready", 7)) {
+		    printf("readyok\n");
+		    continue;
+		} else if (!strncmp(line, "position", 8)) {
+		    ParsePosition(line, pos);
+		} else if (!strncmp(line, "ucinewgame", 10)) {
+		    ParsePosition("position startpos\n", pos);
+		} else if (!strncmp(line, "go", 2)) {
+		    ParseGo(line, info, pos);
+		} else if (!strncmp(line, "quit", 4)) {
+		    info->quit = TRUE;
+		    break;
+		} else if (!strncmp(line, "uci", 3)) {
+			    }
 		if(info->quit) break;
-    }
+	}
 	free(pos->PvTable->pTable);
 }
 void UpdateListsMaterial(S_BOARD *pos) {	
@@ -1567,8 +1650,26 @@ void UpdateListsMaterial(S_BOARD *pos) {
 int main()
 {
 	Init();	
-	
-//uci loop
-	Uci_Loop();
+	setbuf(stdin, NULL);
+        setbuf(stdout, NULL);
+	line=calloc(INPUTBUFFER, sizeof(char));	
+        InitPvTable(pos->PvTable);
+
+//loops
+	while(1){
+		fgets(line, INPUTBUFFER, stdin);
+		if(strncmp(line, "uci", 3)==0){
+			printf("id name %s\n",NAME);
+			printf("id author Kong\n");
+			printf("uciok\n");
+			Uci_Loop();
+			continue;
+
+		}
+		if(strncmp(line, "console",7)==0)
+			Console_Loop();
+		if(strncmp(line, "q", 1)==0)
+			break;
+	}
 	return 0;
 }
