@@ -166,7 +166,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
-#define ENDGAME (2 * PieceVal[wR] + 4 * PieceVal[wN] + 8 * PieceVal[wP])
+#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
@@ -197,7 +197,7 @@ const int BishopTable[64] = {
 0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-const int Castle=10;
+const int Castle=5;
 const int DoubledPawns=-5;
 const int KingEndGame[64] = {	
 	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
@@ -252,8 +252,8 @@ const int PawnTable[64] = {
 20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-const int PawnBackwards= -20;
-const int PawnIsolated = -20;
+const int PawnBackwards= -10;
+const int PawnIsolated = -10;
 const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
 const int RookTable[64] = {
 0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
