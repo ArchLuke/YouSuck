@@ -89,7 +89,6 @@ typedef struct {
 	int hisPly;
 	
 	int castlePerm;
-	int isCastled[2];
 	
 	U64 posKey;
 	
@@ -197,7 +196,7 @@ const int BishopTable[64] = {
 0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-const int Castled=40;
+const int Castle=40;
 const int DoubledPawns=-5;
 const int KnightTable[64] = {
 0	,	-10	,	0	,	0	,	0	,	0	,	-10	,	0	,
@@ -315,7 +314,7 @@ int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
 int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
-int PieceVal[13]= { 0, 100, 325, 325, 550, 1000, 50000, 100, 325, 325, 550, 1000, 50000  };
+int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 325, 550, 1000, 50000  };
 
 int FilesBrd[BRD_SQ_NUM];
 int RanksBrd[BRD_SQ_NUM];

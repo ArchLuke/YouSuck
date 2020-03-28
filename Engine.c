@@ -294,12 +294,16 @@ int EvalPosition(const S_BOARD *pos) {
 	int sqTable[64]={0};
 	int doubledPawns[64]={0};
 	int score = pos->material[WHITE] - pos->material[BLACK];
-
-	if(pos->isCastled[WHITE])
-		score += Castled;
-	if(pos->isCastled[BLACK])
-		score -= Castled;
-			
+	
+	if(pos->castlePerm & WKCA)
+		score += Castle;
+	if(pos->castlePerm & WQCA)
+		score += Castle;
+	if(pos->castlePerm & BKCA)
+		score -= Castle;
+	if(pos->castlePerm & BQCA)
+		score -= Castle;
+		
 	pce = wP;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
@@ -892,10 +896,6 @@ int MakeMove(S_BOARD *pos, int move) {
             ClearPiece(to-10,pos);
         }
     } else if (move & MFLAGCA) {
-	if(side)
-		pos->isCastled[BLACK]=TRUE;
-	else
-		pos->isCastled[WHITE]=TRUE;
         switch(to) {
             case C1:
                 MovePiece(A1, D1, pos);
@@ -1348,7 +1348,18 @@ void PrintPositionalEvals(S_BOARD *pos)
 	int doubledPawns[64]={0};
 	int score = 0;	
 	pce = wP;
-		
+			
+	if(pos->castlePerm & WKCA)
+		score += Castle;
+	if(pos->castlePerm & WQCA)
+		score += Castle;
+	if(pos->castlePerm & BKCA)
+		score -= Castle;
+	if(pos->castlePerm & BQCA)
+		score -= Castle;
+	printf("Castle scores is %d", score);
+
+	score=0;
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
 		sqTable[SQ64(sq)]=TRUE;
