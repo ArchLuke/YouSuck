@@ -430,13 +430,50 @@ int EvalPosition(const S_BOARD *pos) {
 	} else {
 		score += KingMiddleGame[SQ64(square)];
 	}
-	
+		
+	if(pos->material[BLACK] >= ENDGAME)
+	{
+		int sq64=SQ64(square);
+		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
+			score += KingsPawns;
+		}
+		if(FilesBrd[square] != FILE_H)
+		{
+			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
+				score += KingsPawns;
+			}
+		}
+		if((FilesBrd[square] != FILE_A))
+		{
+			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
+				score += KingsPawns;
+			}
+		}
+	}
+
 	pce=bK;
 	square = pos->pList[pce][0];
 	if( pos->material[WHITE] <= ENDGAME) {
 		score -= KingEndGame[MIRROR64(SQ64(square))];
 	} else {
 		score -= KingMiddleGame[MIRROR64(SQ64(square))];
+	}
+
+	if(pos->material[WHITE] >=ENDGAME)
+	{
+		int sq64=SQ64(square);
+		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
+			score -= KingsPawns;
+		if(FilesBrd[square] != FILE_H)
+		{
+			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
+				score -= KingsPawns;
+		}
+		if((FilesBrd[square] != FILE_A))
+		{
+			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
+				score -= KingsPawns;
+		}
 	}
 
 	if(pos->side == WHITE) {
@@ -701,7 +738,7 @@ void InitBitMasks() {
 void InitEvalMasks() {
 
 	int sq, tsq, r, f;
-	
+		
 	for(sq = 0; sq < 8; ++sq) {		
         FileBBMask[sq] = 0ULL; 
 		RankBBMask[sq] = 0ULL; 
@@ -1526,8 +1563,30 @@ void PrintPositionalEvals(S_BOARD *pos)
 	} else {
 		score += KingMiddleGame[SQ64(square)];
 	}
-	printf("White king score is %d", score);
+	printf("White king score is %d \n", score);
 	
+	score=0;
+	if(pos->material[BLACK] >= ENDGAME)
+	{
+		int sq64=SQ64(square);
+		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
+			score += KingsPawns;
+		}
+		if(FilesBrd[square] != FILE_H)
+		{
+			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
+				score += KingsPawns;
+			}
+		}
+		if((FilesBrd[square] != FILE_A))
+		{
+			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
+				score += KingsPawns;
+			}
+		}
+	}
+	printf("White King's pawn score is %d\n", score);	
+
 	pce=bK;
 	score=0;
 	square = pos->pList[pce][0];
@@ -1536,8 +1595,27 @@ void PrintPositionalEvals(S_BOARD *pos)
 	} else {
 		score -= KingMiddleGame[MIRROR64(SQ64(square))];
 	}
-	printf("Black king score is %d", score);
-	
+	printf("Black king score is %d\n", score);
+
+	score=0;
+	if(pos->material[WHITE] >=ENDGAME)
+	{
+		int sq64=SQ64(square);
+		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
+			score -= KingsPawns;
+		if(FilesBrd[square] != FILE_H)
+		{
+			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
+				score -= KingsPawns;
+		}
+		if((FilesBrd[square] != FILE_A))
+		{
+			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
+				score -= KingsPawns;
+		}
+	}
+	printf("Black King's pawn score is %d\n", score);	
+			
 	
 }
 char *PrMove(const int move) {

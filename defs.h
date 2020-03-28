@@ -197,7 +197,7 @@ const int BishopTable[64] = {
 0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-const int Castle=40;
+const int Castle=10;
 const int DoubledPawns=-5;
 const int KingEndGame[64] = {	
 	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
@@ -211,7 +211,7 @@ const int KingEndGame[64] = {
 };
 
 const int KingMiddleGame[64] = {	
-	0	,	10	,	10	,	-10	,	-10	,	0	,	10	,	5	,
+	0	,	20	,	20	,	-10	,	-10	,	0	,	20	,	5	,
 	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,
 	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
 	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
@@ -220,6 +220,7 @@ const int KingMiddleGame[64] = {
 	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
 	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70		
 };
+const int KingsPawns=-10;
 const int KnightTable[64] = {
 0	,	-10	,	0	,	0	,	0	,	0	,	-10	,	0	,
 0	,	0	,	0	,	5	,	5	,	0	,	0	,	0	,
