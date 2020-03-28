@@ -166,6 +166,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
+#define ENDGAME (2 * PieceVal[wR] + 4 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
@@ -198,6 +199,27 @@ const int BishopTable[64] = {
 };
 const int Castle=40;
 const int DoubledPawns=-5;
+const int KingEndGame[64] = {	
+	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
+	-20,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
+	0	,	20	,	40	,	40	,	40	,	40	,	20	,	0	,
+	0	,	20	,	40	,	50	,	50	,	40	,	20	,	0	,
+	0	,	20	,	40	,	50	,	50	,	40	,	20	,	0	,
+	0	,	20	,	40	,	40	,	40	,	40	,	20	,	0	,
+	-20	,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
+	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	
+};
+
+const int KingMiddleGame[64] = {	
+	0	,	10	,	10	,	-10	,	-10	,	0	,	10	,	5	,
+	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,
+	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
+	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
+	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
+	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
+	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
+	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70		
+};
 const int KnightTable[64] = {
 0	,	-10	,	0	,	0	,	0	,	0	,	-10	,	0	,
 0	,	0	,	0	,	5	,	5	,	0	,	0	,	0	,
@@ -314,7 +336,7 @@ int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
 int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
-int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 325, 550, 1000, 50000  };
+int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
 
 int FilesBrd[BRD_SQ_NUM];
 int RanksBrd[BRD_SQ_NUM];

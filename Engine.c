@@ -423,6 +423,22 @@ int EvalPosition(const S_BOARD *pos) {
 		score -= RookTable[MIRROR64(SQ64(sq))];
 	}	
 	
+	pce = wK;
+	int square = pos->pList[pce][0];
+	if((pos->material[BLACK] <= ENDGAME) ) {
+		score += KingEndGame[SQ64(square)];
+	} else {
+		score += KingMiddleGame[SQ64(square)];
+	}
+	
+	pce=bK;
+	square = pos->pList[pce][0];
+	if( pos->material[WHITE] <= ENDGAME) {
+		score -= KingEndGame[MIRROR64(SQ64(square))];
+	} else {
+		score -= KingMiddleGame[MIRROR64(SQ64(square))];
+	}
+
 	if(pos->side == WHITE) {
 		return score;
 	} else {
@@ -1501,6 +1517,28 @@ void PrintPositionalEvals(S_BOARD *pos)
 
 	}
 	printf("Black rook score is %d \n", score);
+
+	pce = wK;
+	score=0;
+	int square = pos->pList[pce][0];
+	if(pos->material[BLACK] <= ENDGAME) {
+		score += KingEndGame[SQ64(square)];
+	} else {
+		score += KingMiddleGame[SQ64(square)];
+	}
+	printf("White king score is %d", score);
+	
+	pce=bK;
+	score=0;
+	square = pos->pList[pce][0];
+	if((pos->material[WHITE] <= ENDGAME) ) {
+		score -= KingEndGame[MIRROR64(SQ64(square))];
+	} else {
+		score -= KingMiddleGame[MIRROR64(SQ64(square))];
+	}
+	printf("Black king score is %d", score);
+	
+	
 }
 char *PrMove(const int move) {
 
@@ -1891,20 +1929,20 @@ void UpdateListsMaterial(S_BOARD *pos) {
 		sq = index;
 		piece = pos->pieces[index];
 		if(piece!=OFFBOARD && piece!= EMPTY) {
-			colour = PieceCol[piece];
+		    colour = PieceCol[piece];
 			
 		    if( PieceBig[piece] == TRUE) pos->bigPce[colour]++;
 		    if( PieceMin[piece] == TRUE) pos->minPce[colour]++;
 		    if( PieceMaj[piece] == TRUE) pos->majPce[colour]++;
-			
-			pos->material[colour] += PieceVal[piece];
+			if(piece==wK) pos->KingSq[WHITE] = sq;
+			else if(piece==bK) pos->KingSq[BLACK] = sq;	
+			else 
+				pos->material[colour] += PieceVal[piece];
 			
 			pos->pList[piece][pos->pceNum[piece]] = sq;
 			pos->pceNum[piece]++;
 			
-			if(piece==wK) pos->KingSq[WHITE] = sq;
-			if(piece==bK) pos->KingSq[BLACK] = sq;	
-			
+					
 			if(piece==wP) {
 				SETBIT(pos->pawns[WHITE],SQ64(sq));
 				SETBIT(pos->pawns[BOTH],SQ64(sq));
