@@ -481,7 +481,7 @@ int FileRankValid(const int fr) {
 			}
 		}
 		
-		if(pos->castlePerm & WQCA & !cap_only) {
+		if(pos->castlePerm & WQCA && !cap_only) {
 			if(pos->pieces[D1] == EMPTY && pos->pieces[C1] == EMPTY && pos->pieces[B1] == EMPTY) {
 				if(!SqAttacked(E1,BLACK,pos) && !SqAttacked(D1,BLACK,pos) ) {
 					AddQuietMove(pos, MOVE(E1, C1, EMPTY, EMPTY, MFLAGCA), list);

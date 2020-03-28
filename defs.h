@@ -229,8 +229,8 @@ const int PawnTable[64] = {
 20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
-const int PawnBackwards= -5;
-const int PawnIsolated = -10;
+const int PawnBackwards= -20;
+const int PawnIsolated = -20;
 const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
 const int RookTable[64] = {
 0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
