@@ -80,7 +80,6 @@ typedef struct {
 	U64 pawns[3];
 		
 	int KingSq[2];
-	int isCastled[2];
 	
 	int side;
 	int enPas;
@@ -90,6 +89,7 @@ typedef struct {
 	int hisPly;
 	
 	int castlePerm;
+	int isCastled[2];
 	
 	U64 posKey;
 	
@@ -124,7 +124,7 @@ typedef struct {
 	
 	int quit;
 	int stopped;
-	
+
 	float fh;
 	float fhf;
 
@@ -230,6 +230,7 @@ const int PawnTable[64] = {
 20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
+const int PawnBackwards= -5;
 const int PawnIsolated = -10;
 const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
 const int RookTable[64] = {
@@ -288,6 +289,7 @@ const int PceDir[13][8] = {
 };
 const int VictimScore[13] = { 0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600 };
 
+U64 BlackBackwardsMask[64];
 U64 BlackPassedMask[64];
 U64 CastleKeys[16];
 U64 ClearMask[64];
@@ -299,6 +301,7 @@ U64 SetMask[64];
 U64 SideKey;
 int Sq64ToSq120[64];
 int Sq120ToSq64[BRD_SQ_NUM];
+U64 WhiteBackwardsMask[64];
 U64 WhitePassedMask[64];
 
 char FileChar[] = "abcdefgh";

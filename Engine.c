@@ -314,6 +314,12 @@ int EvalPosition(const S_BOARD *pos) {
 		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
 			score += PawnPassed[RanksBrd[sq]];
 		}
+
+		if(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]==0)
+		{
+			score += PawnBackwards;
+		}
+
 		int square;
 		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
 		{
@@ -349,6 +355,12 @@ int EvalPosition(const S_BOARD *pos) {
 		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
 			score -= PawnPassed[7 - RanksBrd[sq]];
 		}
+
+		if(BlackBackwardsMask[SQ64(sq)] & pos->pawns[BLACK]==0)
+		{
+			score -= PawnBackwards;
+		}
+
 		int square;
 		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
 		{
@@ -687,19 +699,42 @@ void InitEvalMasks() {
 		IsolatedMask[sq] = 0ULL; 
 		WhitePassedMask[sq] = 0ULL; 
 		BlackPassedMask[sq] = 0ULL;
-    }
+    	}
 
 	for(sq = 0; sq < 64; ++sq) {
+
+		BlackBackwardsMask[sq] |= (1ULL << sq);
+		WhiteBackwardsMask[sq] |= (1ULL << sq);
+
+		int i=FilesBrd[SQ120(sq)];
+		while(i<=FILE_H)
+		{
+			BlackBackwardsMask[sq] |= (1ULL << (sq+(i-FilesBrd[SQ120(sq)])));
+	    		WhiteBackwardsMask[sq] |= (1ULL << (sq+(i-FilesBrd[SQ120(sq)])));
+
+			i++;	
+		}
+		i=FilesBrd[SQ120(sq)];
+		while(i>=FILE_A)
+		{
+
+			BlackBackwardsMask[sq] |= (1ULL << (sq-(FilesBrd[SQ120(sq)-i])));
+			WhiteBackwardsMask[sq] |= (1ULL << (sq-(FilesBrd[SQ120(sq)-i])));
+
+			i--;	
+		}
 		tsq = sq + 8;
 			
 		while(tsq < 64) {
 		    WhitePassedMask[sq] |= (1ULL << tsq);
+		    BlackBackwardsMask[sq] |= (1ULL<<tsq);
 		    tsq += 8;
 		}
 
 		tsq = sq - 8;
 		while(tsq >= 0) {
 		    BlackPassedMask[sq] |= (1ULL << tsq);
+		    WhiteBackwardsMask[sq] |= (1ULL<<tsq);
 		    tsq -= 8;
 		}
 
@@ -708,12 +743,14 @@ void InitEvalMasks() {
 
 		    tsq = sq + 7;
 		    while(tsq < 64) {
+			BlackBackwardsMask[sq] |= (1ULL<<tsq);
 			WhitePassedMask[sq] |= (1ULL << tsq);
 			tsq += 8;
 		    }
 
 		    tsq = sq - 9;
 		    while(tsq >= 0) {
+			WhiteBackwardsMask[sq] |= (1ULL<<tsq);
 			BlackPassedMask[sq] |= (1ULL << tsq);
 			tsq -= 8;
 		    }
@@ -724,17 +761,19 @@ void InitEvalMasks() {
 
 		    tsq = sq + 9;
 		    while(tsq < 64) {
+			BlackBackwardsMask[sq] |= (1ULL<<tsq);
 			WhitePassedMask[sq] |= (1ULL << tsq);
 			tsq += 8;
 		    }
 
 		    tsq = sq - 7;
 		    while(tsq >= 0) {
+			WhiteBackwardsMask[sq] |= (1ULL <<tsq);
 			BlackPassedMask[sq] |= (1ULL << tsq);
 			tsq -= 8;
 		    }
 		}
-	}	
+	}
 }
 void InitFilesRanksBrd() {
 	
@@ -1308,7 +1347,8 @@ void PrintPositionalEvals(S_BOARD *pos)
 	int sqTable[64]={0};
 	int doubledPawns[64]={0};
 	int score = 0;	
-	pce = wP;	
+	pce = wP;
+		
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
 		sq = pos->pList[pce][pceNum];
 		sqTable[SQ64(sq)]=TRUE;
@@ -1319,16 +1359,24 @@ void PrintPositionalEvals(S_BOARD *pos)
 		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
 			score += PawnIsolated;
 		}
-		
 		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			printf("white passed \n");
 			score += PawnPassed[RanksBrd[sq]];
 		}
+		
+		if(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]==0)
+		{
+			PrintBitBoard(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]);
+			score += PawnBackwards;
+		}
+
 		int square;
 		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
 		{
 			square=SQ64(sq+10*(i-RanksBrd[sq]));
 			if (sqTable[square] && !doubledPawns[SQ64(sq)])
 			{
+				printf("doubled\n");
 				doubledPawns[square]=TRUE;
 				score += DoubledPawns;
 			}
@@ -1338,10 +1386,12 @@ void PrintPositionalEvals(S_BOARD *pos)
 			int square=SQ64(sq-10*(RanksBrd[sq]-i));
 			if (sqTable[square] && !doubledPawns[SQ64(sq)])
 			{
+				printf("doubled\n");
 				doubledPawns[square]=TRUE;
 				score += DoubledPawns;
 			}
 		}
+		
 	}
 	printf("White pawn score is %d\n", score);
 
@@ -1360,6 +1410,12 @@ void PrintPositionalEvals(S_BOARD *pos)
 		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
 			score -= PawnPassed[7 - RanksBrd[sq]];
 		}
+
+		if(BlackBackwardsMask[SQ64(sq)] & pos->pawns[BLACK]==0)
+		{
+			score -= PawnBackwards;
+		}
+
 		int square;
 		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
 		{
