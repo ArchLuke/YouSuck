@@ -5,6 +5,106 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <unistd.h>
+U64 BlackBackwardsMask[64];
+U64 BlackPassedMask[64];
+U64 CastleKeys[16];
+U64 ClearMask[64];
+U64 FileBBMask[8];
+U64 IsolatedMask[64];
+U64 PieceKeys[13][120];
+U64 RankBBMask[8];
+U64 SetMask[64];
+U64 SideKey;
+int Sq64ToSq120[64];
+int Sq120ToSq64[BRD_SQ_NUM];
+U64 WhiteBackwardsMask[64];
+U64 WhitePassedMask[64];
+char *line;
+int FilesBrd[BRD_SQ_NUM];
+int RanksBrd[BRD_SQ_NUM];
+int rootDepth;
+S_BOARD pos[1];
+S_SEARCHINFO info[1];
+
+const int Castle=5;
+const int BiDir[4] = { -9, -11, 11, 9 };
+const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
+const int KnDir[8] = { -8, -19,	-21, -12, 8, 19, 21, 12 };
+const int RkDir[4] = { -1, -10,	1, 10 };
+const int PvSize = 0x100000 * 2;
+const int BitTable[64] = {
+  63, 30, 3, 32, 25, 41, 22, 33, 15, 50, 42, 13, 11, 53, 19, 34, 61, 29, 2,
+  51, 21, 43, 45, 10, 18, 47, 1, 54, 9, 57, 0, 35, 62, 31, 40, 4, 49, 5, 52,
+  26, 60, 6, 23, 44, 46, 27, 56, 16, 7, 39, 48, 24, 59, 14, 12, 55, 38, 28,
+  58, 20, 37, 17, 36, 8
+};
+const int LoopNonSlideIndex[2] = { 0, 3 };
+const int LoopNonSlidePce[6] = {
+ wN, wK, 0, bN, bK, 0
+};
+const int LoopSlideIndex[2] = { 0, 4 };
+const int LoopSlidePce[8] = {
+ wB, wR, wQ, 0, bB, bR, bQ, 0
+};
+
+int MvvLvaScores[13][13];
+const int NumDir[13] = {
+ 0, 0, 8, 4, 4, 8, 8, 0, 8, 4, 4, 8, 8
+};
+
+const int PceDir[13][8] = {
+	{ 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0 },
+	{ -8, -19,	-21, -12, 8, 19, 21, 12 },
+	{ -9, -11, 11, 9, 0, 0, 0, 0 },
+	{ -1, -10,	1, 10, 0, 0, 0, 0 },
+	{ -1, -10,	1, 10, -9, -11, 11, 9 },
+	{ -1, -10,	1, 10, -9, -11, 11, 9 },
+	{ 0, 0, 0, 0, 0, 0, 0 },
+	{ -8, -19,	-21, -12, 8, 19, 21, 12 },
+	{ -9, -11, 11, 9, 0, 0, 0, 0 },
+	{ -1, -10,	1, 10, 0, 0, 0, 0 },
+	{ -1, -10,	1, 10, -9, -11, 11, 9 },
+	{ -1, -10,	1, 10, -9, -11, 11, 9 }
+};
+const int CastlePerm[120] = {
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 13, 15, 15, 15, 12, 15, 15, 14, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15,  7, 15, 15, 15,  3, 15, 15, 11, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15
+};
+const int VictimScore[13] = { 0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600 };
+
+char FileChar[] = "abcdefgh";
+char PceChar[] = ".PNBRQKpnbrqk";
+char RankChar[] = "12345678";
+char SideChar[] = "wb-";
+
+int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
+int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
+int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
+int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
+int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
+int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
+
+int FilesBrd[BRD_SQ_NUM];
+int RanksBrd[BRD_SQ_NUM];
+
+int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
+int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
+int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
+int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
+int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
+
 
 void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
@@ -288,11 +388,6 @@ int CountBits(U64 b) {
 }
 int EvalPosition(const S_BOARD *pos) {
 
-	int pce;
-	int pceNum;
-	int sq;
-	int sqTable[64]={0};
-	int doubledPawns[64]={0};
 	int score = pos->material[WHITE] - pos->material[BLACK];
 	
 	if(pos->castlePerm & WKCA)
@@ -304,177 +399,18 @@ int EvalPosition(const S_BOARD *pos) {
 	if(pos->castlePerm & BQCA)
 		score -= Castle;
 		
-	pce = wP;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		sqTable[SQ64(sq)]=TRUE;
-		score += PawnTable[SQ64(sq)];	
-		
-		
-		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
-			score += PawnIsolated;
-		}
-		
-		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
-			score += PawnPassed[RanksBrd[sq]];
-		}
-
-		if(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]==0)
-		{
-			score += PawnBackwards;
-		}
-
-		int square;
-		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
-		{
-			square=SQ64(sq+10*(i-RanksBrd[sq]));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score += DoubledPawns;
-			}
-		}
-		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
-		{
-			int square=SQ64(sq-10*(RanksBrd[sq]-i));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score += DoubledPawns;
-			}
-		}
-
-	}
-	memset(sqTable, 0, 64);	
-	pce = bP;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		sqTable[SQ64(sq)]=TRUE;
-		score -= PawnTable[MIRROR64(SQ64(sq))];	
-		
-		if( (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
-			score -= PawnIsolated;
-		}
-		
-		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
-			score -= PawnPassed[7 - RanksBrd[sq]];
-		}
-
-		if(BlackBackwardsMask[SQ64(sq)] & pos->pawns[BLACK]==0)
-		{
-			score -= PawnBackwards;
-		}
-
-		int square;
-		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
-		{
-			square=SQ64(sq+10*(i-RanksBrd[sq]));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score -= DoubledPawns;
-			}
-		}
-		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
-		{
-			int square=SQ64(sq-10*(RanksBrd[sq]-i));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score -= DoubledPawns;
-			}
-		}
-
-	}		
-	
-	pce = wN;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += KnightTable[SQ64(sq)];
-	}	
-
-	pce = bN;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= KnightTable[MIRROR64(SQ64(sq))];
-	}			
-	
-	pce = wB;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += BishopTable[SQ64(sq)];
-	}	
-
-	pce = bB;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= BishopTable[MIRROR64(SQ64(sq))];
-	}	
-
-	pce = wR;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += RookTable[SQ64(sq)];
-	}	
-
-	pce = bR;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= RookTable[MIRROR64(SQ64(sq))];
-	}	
-	
-	pce = wK;
-	int square = pos->pList[pce][0];
-	if((pos->material[BLACK] <= ENDGAME) ) {
-		score += KingEndGame[SQ64(square)];
-	} else {
-		score += KingMiddleGame[SQ64(square)];
-	}
-		
-	if(pos->material[BLACK] >= ENDGAME)
-	{
-		int sq64=SQ64(square);
-		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
-			score += KingsPawns;
-		}
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
-				score += KingsPawns;
-			}
-		}
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
-				score += KingsPawns;
-			}
-		}
-	}
-
-	pce=bK;
-	square = pos->pList[pce][0];
-	if( pos->material[WHITE] <= ENDGAME) {
-		score -= KingEndGame[MIRROR64(SQ64(square))];
-	} else {
-		score -= KingMiddleGame[MIRROR64(SQ64(square))];
-	}
-
-	if(pos->material[WHITE] >=ENDGAME)
-	{
-		int sq64=SQ64(square);
-		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
-			score -= KingsPawns;
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
-				score -= KingsPawns;
-		}
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
-				score -= KingsPawns;
-		}
-	}
+	score += EvalWhitePawns(pos);
+	score += EvalBlackPawns(pos);
+	score += EvalWhiteKnight(pos);
+	score += EvalBlackKnight(pos);
+	score += EvalWhiteRook(pos);
+	score += EvalBlackRook(pos);
+	score += EvalBlackBishop(pos);
+	score += EvalWhiteBishop(pos);
+	score += EvalWhiteKing(pos);
+	score += EvalWhiteKingPawns(pos);
+	score += EvalBlackKing(pos);
+	score += EvalBlackKingPawns(pos);
 
 	if(pos->side == WHITE) {
 		return score;
@@ -1394,14 +1330,8 @@ void PrintBoard(const S_BOARD *pos) {
 }
 void PrintPositionalEvals(S_BOARD *pos)
 {
-	int pce;
-	int pceNum;
-	int sq;
-	int sqTable[64]={0};
-	int doubledPawns[64]={0};
-	int score = 0;	
-	pce = wP;
-			
+	int score=0;	
+	
 	if(pos->castlePerm & WKCA)
 		score += Castle;
 	if(pos->castlePerm & WQCA)
@@ -1412,208 +1342,40 @@ void PrintPositionalEvals(S_BOARD *pos)
 		score -= Castle;
 	printf("Castle scores is %d", score);
 
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		sqTable[SQ64(sq)]=TRUE;
-		
-		score += PawnTable[SQ64(sq)];	
-		
-		
-		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
-			score += PawnIsolated;
-		}
-		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
-			printf("white passed \n");
-			score += PawnPassed[RanksBrd[sq]];
-		}
-		
-		if(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]==0)
-		{
-			PrintBitBoard(WhiteBackwardsMask[SQ64(sq)] & pos->pawns[WHITE]);
-			score += PawnBackwards;
-		}
-
-		int square;
-		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
-		{
-			square=SQ64(sq+10*(i-RanksBrd[sq]));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				printf("doubled\n");
-				doubledPawns[square]=TRUE;
-				score += DoubledPawns;
-			}
-		}
-		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
-		{
-			int square=SQ64(sq-10*(RanksBrd[sq]-i));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				printf("doubled\n");
-				doubledPawns[square]=TRUE;
-				score += DoubledPawns;
-			}
-		}
-		
-	}
+	score=EvalWhitePawns(pos);
 	printf("White pawn score is %d\n", score);
 
-	memset(sqTable, 0, 64);	
-	pce = bP;
-	score=0;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		sqTable[SQ64(sq)]=TRUE;
-		score -= PawnTable[MIRROR64(SQ64(sq))];	
-		
-		if( (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
-			score -= PawnIsolated;
-		}
-		
-		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
-			score -= PawnPassed[7 - RanksBrd[sq]];
-		}
-
-		if(BlackBackwardsMask[SQ64(sq)] & pos->pawns[BLACK]==0)
-		{
-			score -= PawnBackwards;
-		}
-
-		int square;
-		for(int i=RanksBrd[sq]+1;i<RANK_8;i++)
-		{
-			square=SQ64(sq+10*(i-RanksBrd[sq]));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score -= DoubledPawns;
-			}
-		}
-		for(int i=RanksBrd[sq]-1;i>RANK_1;i--)
-		{
-			int square=SQ64(sq-10*(RanksBrd[sq]-i));
-			if (sqTable[square] && !doubledPawns[SQ64(sq)])
-			{
-				doubledPawns[square]=TRUE;
-				score -= DoubledPawns;
-			}
-		}
-	}	
+	score=EvalBlackPawns(pos);	
 	printf("Black pawn score is %d\n", score);
 
-	pce = wN;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += KnightTable[SQ64(sq)];
-
-	}	
+	score=EvalWhiteKnight(pos);
 	printf("White Knight score is %d \n", score);
 
-	pce = bN;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= KnightTable[MIRROR64(SQ64(sq))];
-
-	}			
+	score=EvalBlackKnight(pos);		
 	printf("Black knight score is %d \n", score);
+	
+	score=EvalWhiteBishop(pos);
+	printf("white bishop score is %d \n", score);
 
-	pce = wB;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += BishopTable[SQ64(sq)];
-	}	
-	printf("White bishop score is %d \n", score);
-
-	pce = bB;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= BishopTable[MIRROR64(SQ64(sq))];
-
-	}	
+	score=EvalBlackBishop(pos);
 	printf("Black bishop score is %d \n", score);
 
-	pce = wR;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += RookTable[SQ64(sq)];
-
-	}	
+	score=EvalWhiteRook(pos);
 	printf("White rook score is %d \n", score);
 
-	pce = bR;	
-	score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= RookTable[MIRROR64(SQ64(sq))];
-
-	}
+	score=EvalBlackRook(pos);
 	printf("Black rook score is %d \n", score);
 
-	pce = wK;
-	score=0;
-	int square = pos->pList[pce][0];
-	if(pos->material[BLACK] <= ENDGAME) {
-		score += KingEndGame[SQ64(square)];
-	} else {
-		score += KingMiddleGame[SQ64(square)];
-	}
+	score=EvalWhiteKing(pos);
 	printf("White king score is %d \n", score);
 	
-	score=0;
-	if(pos->material[BLACK] >= ENDGAME)
-	{
-		int sq64=SQ64(square);
-		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
-			score += KingsPawns;
-		}
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
-				score += KingsPawns;
-			}
-		}
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
-				score += KingsPawns;
-			}
-		}
-	}
+	score=EvalWhiteKingPawns(pos);
 	printf("White King's pawn score is %d\n", score);	
 
-	pce=bK;
-	score=0;
-	square = pos->pList[pce][0];
-	if((pos->material[WHITE] <= ENDGAME) ) {
-		score -= KingEndGame[MIRROR64(SQ64(square))];
-	} else {
-		score -= KingMiddleGame[MIRROR64(SQ64(square))];
-	}
+	score=EvalBlackKing(pos);
 	printf("Black king score is %d\n", score);
 
-	score=0;
-	if(pos->material[WHITE] >=ENDGAME)
-	{
-		int sq64=SQ64(square);
-		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
-			score -= KingsPawns;
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
-				score -= KingsPawns;
-		}
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
-				score -= KingsPawns;
-		}
-	}
+	score=EvalBlackKingPawns(pos);
 	printf("Black King's pawn score is %d\n", score);	
 			
 	

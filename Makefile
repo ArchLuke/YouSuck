@@ -1,2 +1,2 @@
 output:
-	gcc Engine.c -g -o YouSuck
+	gcc Engine.c Bishop.c Rook.c Pawn.c Knight.c King.c -g -o YouSuck

@@ -1,9 +1,9 @@
+#ifndef DEF_H
+#define DEF_H
 
 #include "config.h"
 #include "stdlib.h"
 
-#ifndef DEFS_H
-#define DEFS_H
 
 typedef unsigned long long U64;
 
@@ -26,20 +26,6 @@ enum {
   A6 = 71, B6, C6, D6, E6, F6, G6, H6,
   A7 = 81, B7, C7, D7, E7, F7, G7, H7,
   A8 = 91, B8, C8, D8, E8, F8, G8, H8, NO_SQ, OFFBOARD
-};
-const int CastlePerm[120] = {
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 13, 15, 15, 15, 12, 15, 15, 14, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15,  7, 15, 15, 15,  3, 15, 15, 11, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15
 };
 enum { FALSE, TRUE };
 
@@ -166,7 +152,6 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
-#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
@@ -186,174 +171,31 @@ typedef struct {
 #define SQOFFBOARD(sq) (FilesBrd[(sq)]==OFFBOARD)
 
 
-/* GLOBALS */
-const int BishopTable[64] = {
-0	,	0	,	-10	,	0	,	0	,	-10	,	0	,	0	,
-0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
-0	,	0	,	10	,	15	,	15	,	10	,	0	,	0	,
-0	,	10	,	25	,	20	,	20	,	25	,	10	,	0	,
-0	,	10	,	15	,	20	,	20	,	15	,	10	,	0	,
-0	,	0	,	10	,	15	,	15	,	10	,	0	,	0	,
-0	,	0	,	0	,	10	,	10	,	0	,	0	,	0	,
-0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
-};
-const int Castle=5;
-const int DoubledPawns=-5;
-const int KingEndGame[64] = {	
-	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
-	-20,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
-	0	,	20	,	40	,	40	,	40	,	40	,	20	,	0	,
-	0	,	20	,	40	,	50	,	50	,	40	,	20	,	0	,
-	0	,	20	,	40	,	50	,	50	,	40	,	20	,	0	,
-	0	,	20	,	40	,	40	,	40	,	40	,	20	,	0	,
-	-20	,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
-	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	
-};
+extern U64 BlackBackwardsMask[64];
+extern U64 BlackPassedMask[64];
+extern U64 CastleKeys[16];
+extern U64 ClearMask[64];
+extern U64 FileBBMask[8];
+extern U64 IsolatedMask[64];
+extern U64 PieceKeys[13][120];
+extern U64 RankBBMask[8];
+extern U64 SetMask[64];
+extern U64 SideKey;
+extern int Sq64ToSq120[64];
+extern int Sq120ToSq64[BRD_SQ_NUM];
+extern U64 WhiteBackwardsMask[64];
+extern U64 WhitePassedMask[64];
 
-const int KingMiddleGame[64] = {	
-	0	,	20	,	20	,	-10	,	-10	,	0	,	20	,	5	,
-	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,
-	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70		
-};
-const int KingsPawns=-10;
-const int KnightTable[64] = {
-0	,	-10	,	0	,	0	,	0	,	0	,	-10	,	0	,
-0	,	0	,	0	,	5	,	5	,	0	,	0	,	0	,
-0	,	0	,	10	,	10	,	10	,	10	,	0	,	0	,
-0	,	0	,	10	,	20	,	20	,	10	,	5	,	0	,
-5	,	10	,	15	,	20	,	20	,	15	,	10	,	5	,
-5	,	10	,	10	,	20	,	20	,	10	,	10	,	5	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	0	,	0	,	0	,	0	,	0	,	0		
-};
+extern char *line;
+extern int FilesBrd[BRD_SQ_NUM];
+extern int RanksBrd[BRD_SQ_NUM];
+extern int rootDepth;
 
-const int Mirror64[64] = {
-56	,	57	,	58	,	59	,	60	,	61	,	62	,	63	,
-48	,	49	,	50	,	51	,	52	,	53	,	54	,	55	,
-40	,	41	,	42	,	43	,	44	,	45	,	46	,	47	,
-32	,	33	,	34	,	35	,	36	,	37	,	38	,	39	,
-24	,	25	,	26	,	27	,	28	,	29	,	30	,	31	,
-16	,	17	,	18	,	19	,	20	,	21	,	22	,	23	,
-8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
-0	,	1	,	2	,	3	,	4	,	5	,	6	,	7
-};
-const int PawnTable[64] = {
-0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,
-10	,	10	,	0	,	-10	,	-10	,	0	,	10	,	10	,
-5	,	0	,	0	,	5	,	5	,	0	,	0	,	5	,
-0	,	0	,	10	,	20	,	20	,	10	,	0	,	0	,
-5	,	5	,	5	,	10	,	10	,	5	,	5	,	5	,
-10	,	10	,	10	,	20	,	20	,	10	,	10	,	10	,
-20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
-0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
-};
-const int PawnBackwards= -10;
-const int PawnIsolated = -10;
-const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
-const int RookTable[64] = {
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-25	,	25	,	25	,	25	,	25	,	25	,	25	,	25	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0		
-};
-const int RookOpenFile = 5;
+extern const int Mirror64[64];
+extern int PieceVal[13];
 
-
-const int BiDir[4] = { -9, -11, 11, 9 };
-const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
-const int KnDir[8] = { -8, -19,	-21, -12, 8, 19, 21, 12 };
-const int RkDir[4] = { -1, -10,	1, 10 };
-
-
-const int BitTable[64] = {
-  63, 30, 3, 32, 25, 41, 22, 33, 15, 50, 42, 13, 11, 53, 19, 34, 61, 29, 2,
-  51, 21, 43, 45, 10, 18, 47, 1, 54, 9, 57, 0, 35, 62, 31, 40, 4, 49, 5, 52,
-  26, 60, 6, 23, 44, 46, 27, 56, 16, 7, 39, 48, 24, 59, 14, 12, 55, 38, 28,
-  58, 20, 37, 17, 36, 8
-};
-const int LoopNonSlideIndex[2] = { 0, 3 };
-const int LoopNonSlidePce[6] = {
- wN, wK, 0, bN, bK, 0
-};
-const int LoopSlideIndex[2] = { 0, 4 };
-const int LoopSlidePce[8] = {
- wB, wR, wQ, 0, bB, bR, bQ, 0
-};
-
-static int MvvLvaScores[13][13];
-const int NumDir[13] = {
- 0, 0, 8, 4, 4, 8, 8, 0, 8, 4, 4, 8, 8
-};
-
-const int PceDir[13][8] = {
-	{ 0, 0, 0, 0, 0, 0, 0 },
-	{ 0, 0, 0, 0, 0, 0, 0 },
-	{ -8, -19,	-21, -12, 8, 19, 21, 12 },
-	{ -9, -11, 11, 9, 0, 0, 0, 0 },
-	{ -1, -10,	1, 10, 0, 0, 0, 0 },
-	{ -1, -10,	1, 10, -9, -11, 11, 9 },
-	{ -1, -10,	1, 10, -9, -11, 11, 9 },
-	{ 0, 0, 0, 0, 0, 0, 0 },
-	{ -8, -19,	-21, -12, 8, 19, 21, 12 },
-	{ -9, -11, 11, 9, 0, 0, 0, 0 },
-	{ -1, -10,	1, 10, 0, 0, 0, 0 },
-	{ -1, -10,	1, 10, -9, -11, 11, 9 },
-	{ -1, -10,	1, 10, -9, -11, 11, 9 }
-};
-const int VictimScore[13] = { 0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600 };
-
-U64 BlackBackwardsMask[64];
-U64 BlackPassedMask[64];
-U64 CastleKeys[16];
-U64 ClearMask[64];
-U64 FileBBMask[8];
-U64 IsolatedMask[64];
-U64 PieceKeys[13][120];
-U64 RankBBMask[8];
-U64 SetMask[64];
-U64 SideKey;
-int Sq64ToSq120[64];
-int Sq120ToSq64[BRD_SQ_NUM];
-U64 WhiteBackwardsMask[64];
-U64 WhitePassedMask[64];
-
-char FileChar[] = "abcdefgh";
-char PceChar[] = ".PNBRQKpnbrqk";
-char RankChar[] = "12345678";
-char SideChar[] = "wb-";
-
-int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
-int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
-int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
-int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
-int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
-int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
-
-int FilesBrd[BRD_SQ_NUM];
-int RanksBrd[BRD_SQ_NUM];
-
-int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
-int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
-int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
-int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
-int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
-
-char *line;
-const int PvSize = 0x100000 * 2;
-int rootDepth;
 S_BOARD pos[1];
 S_SEARCHINFO info[1];
-
 /* FUNCTIONS */
 void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 void AddEnPassantMoe( const S_BOARD *pos, int move, S_MOVELIST *list );
@@ -368,7 +210,19 @@ void ClearPiece(const int sq, S_BOARD *pos);
 void ClearPvTable(S_PVTABLE *table);
 void Console_Loop();
 int CountBits(U64 b);
+int EvalBlackBishop(const S_BOARD *pos);
+int EvalBlackKing(const S_BOARD *pos);
+int EvalBlackKingPawns(const S_BOARD *pos);
+int EvalBlackKnight(const S_BOARD *pos);
+int EvalBlackPawns(const S_BOARD *pos);
+int EvalBlackRook(const S_BOARD *pos);
 int EvalPosition(const S_BOARD *pos);
+int EvalWhiteBishop(const S_BOARD *pos);
+int EvalWhiteKing(const S_BOARD *pos);
+int EvalWhiteKingPawns(const S_BOARD *pos);
+int EvalWhiteKnight(const S_BOARD *pos);
+int EvalWhitePawns(const S_BOARD *pos);
+int EvalWhiteRook(const S_BOARD *pos);
 int FileRankValid(const int fr);
 void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 U64 GeneratePosKey(const S_BOARD *pos);
