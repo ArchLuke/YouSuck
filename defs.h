@@ -138,7 +138,7 @@ typedef struct {
 #define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
 #define HASH_SIDE (pos->posKey ^= (SideKey))
 #define INFINITE 30000
-#define INPUTBUFFER 256
+#define INPUTBUFFER 2560
 #define MATE 29000
 
 /* GAME MOVE */
