@@ -2,9 +2,9 @@
 const int KingEndGame[64] = {	
 	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
 	-20,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
+	0	,	20	,	20	,	30	,	30	,	20	,	20	,	0	,
 	0	,	20	,	30	,	30	,	30	,	30	,	20	,	0	,
-	0	,	20	,	30	,	40	,	40	,	30	,	20	,	0	,
-	0	,	20	,	30	,	40	,	40	,	30	,	20	,	0	,
+	0	,	20	,	30	,	30	,	30	,	30	,	20	,	0	,
 	0	,	20	,	20	,	30	,	30	,	20	,	20	,	0	,
 	-20	,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
 	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	
@@ -30,7 +30,8 @@ const int Mirror64[64] = {
 8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
 0	,	1	,	2	,	3	,	4	,	5	,	6	,	7
 };
-const int KingsPawns=-20;
+const int KingsPawns=-10;
+const int OpenFile=-20;
 int EvalWhiteKing(const S_BOARD *pos)
 {
 	int sq = pos->pList[wK][0];
@@ -50,21 +51,33 @@ int EvalWhiteKingPawns(const S_BOARD *pos)
 	if(pos->material[BLACK] >= ENDGAME)
 	{
 		int sq64=SQ64(square);
+		int file=FilesBrd[square];
 		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
 			score += KingsPawns;
 		}
+		if(!(FileBBMask[file] & pos->pawns[BOTH]))
+			score += OpenFile;
+
 		if(FilesBrd[square] != FILE_H)
 		{
 			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
 				score += KingsPawns;
 			}
 		}
+		if(file+1<=FILE_H)
+			if(!(FileBBMask[file+1] & pos->pawns[BOTH]))
+				score += OpenFile;
+
 		if((FilesBrd[square] != FILE_A))
 		{
 			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
 				score += KingsPawns;
 			}
 		}
+		if(file-1>=FILE_A)
+			if(!(FileBBMask[file-1] & pos->pawns[BOTH]))
+				score += OpenFile;
+
 	}
 	return score;
 }
@@ -86,18 +99,31 @@ int EvalBlackKingPawns(const S_BOARD *pos)
 	if(pos->material[WHITE] >=ENDGAME)
 	{
 		int sq64=SQ64(square);
+		int file=FilesBrd[square];
 		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
 			score -= KingsPawns;
+		if(!(FileBBMask[file] & pos->pawns[BOTH]))
+			score -= OpenFile;
 		if(FilesBrd[square] != FILE_H)
 		{
 			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
 				score -= KingsPawns;
 		}
+		if(file+1<=FILE_H)
+			if(!(FileBBMask[file+1] & pos->pawns[BOTH]))
+				score -= OpenFile;
+		
 		if((FilesBrd[square] != FILE_A))
 		{
 			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
 				score -= KingsPawns;
 		}
+		if(file-1>=FILE_A)
+			if(!(FileBBMask[file-1] & pos->pawns[BOTH]))
+				score -= OpenFile;
+
+		
 	}
+	
 	return score;
 }
