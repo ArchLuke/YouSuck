@@ -20,6 +20,7 @@ U64 SideKey;
 
 int FilesBrd[BRD_SQ_NUM];
 char *line;
+const int TargetKing=5;
 int RanksBrd[BRD_SQ_NUM];
 S_BOARD pos[1];
 S_SEARCHINFO info[1];
@@ -287,6 +288,18 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, 
 	}
 	
 	return alpha;
+}
+int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side)
+{
+	if(pos->material[!side]>=ENDGAME)
+	{
+		if(sq==King || sq==(King+1) ||sq==(King-1)|| 
+			sq==(King-11)|| sq==(King+11) ||
+			sq==(King -9)|| sq==(King +9) ||
+			sq==(King +10) || sq==(King - 10))
+				return TargetKing;
+	}
+	return 0;
 }
 void CheckUp(S_SEARCHINFO *info) {
 	// .. check if time up, or interrupt from GUI

@@ -1,57 +1,68 @@
 #include "defs.h"
-const int BishopScore=2.5;
-const int BishopPair=20;
+const int BishopScore=3;
+const int BishopPair=10;
+
 int EvalWhiteBishop(const S_BOARD *pos)
 {
 	int influence;
 	int sq;
 	int pceNum;	
 	int score=0;
+	int blackKing=pos->pList[bK][0];
+	int search=TRUE;
 	for(pceNum = 0; pceNum < pos->pceNum[wB]; ++pceNum) {
 		influence=0;
 		sq = pos->pList[wB][pceNum];
-		sq += 11;
-		while(SqOnBoard(sq))
+		while(SqOnBoard(sq += 11))
 		{
+			score += CheckKingSquare(pos,sq, blackKing, WHITE);			
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq += 11;
+				search=FALSE;
 		}
 		sq=pos->pList[wB][pceNum];
-		sq -= 11;
-		while(SqOnBoard(sq))
+		search=TRUE;
+		while(SqOnBoard(sq-=11))
 		{
+			score += CheckKingSquare(pos,sq,blackKing,WHITE);
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq -= 11;
+				search=FALSE;
 		}
 		sq=pos->pList[wB][pceNum];
-		sq -= 9;
-		while(SqOnBoard(sq))
+		search=TRUE;
+		while(SqOnBoard(sq-=9))
 		{
+			score += CheckKingSquare(pos,sq,blackKing,WHITE);
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq -= 9;
+				search=FALSE;
+
 		}
 		sq=pos->pList[wB][pceNum];
-		sq += 9;
-		while(SqOnBoard(sq))
+		search=TRUE;
+		while(SqOnBoard(sq+=9))
 		{
+			score += CheckKingSquare(pos,sq,blackKing,WHITE);
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq += 9;
+				search=FALSE;
+
 		}
 
 		score += influence * BishopScore;
-		
 	}
 	if(pos->pceNum[wB]>1)
 		score += BishopPair;
@@ -62,56 +73,65 @@ int EvalBlackBishop(const S_BOARD *pos)
 {
 	int influence;
 	int sq;
-	int pceNum;
+	int pceNum;	
 	int score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[bB]; ++pceNum) {
+	int whiteKing=pos->pList[wK][0];
+	int search=TRUE;
+	for(pceNum = 0; pceNum < pos->pceNum[wB]; ++pceNum) {
 		influence=0;
 		sq = pos->pList[bB][pceNum];
-		sq += 11;
-		while(SqOnBoard(sq))
+		while(SqOnBoard(sq += 11))
 		{
+			score -= CheckKingSquare(pos,sq, whiteKing,BLACK);			
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq += 11;
+				search=FALSE;
 		}
 		sq=pos->pList[bB][pceNum];
-		sq -= 11;
-		while(SqOnBoard(sq))
+		search=TRUE;
+		while(SqOnBoard(sq-=11))
 		{
+			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq -= 11;
+				search=FALSE;
 		}
 		sq=pos->pList[bB][pceNum];
-		sq -= 9;
-		while(SqOnBoard(sq))
+		search=TRUE;
+		while(SqOnBoard(sq-=9))
 		{
+			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
+			if(!search)
+				continue;
 			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
 				influence ++;
 			else
-				break;
-			sq -= 9;
-		}
-		sq=pos->pList[bB][pceNum];
-		sq += 9;
-		while(SqOnBoard(sq))
-		{
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				break;
-			sq += 9;
-		}
+				search=FALSE;
 
+		}
+		sq=pos->pList[bB][pceNum];
+		search=TRUE;
+		while(SqOnBoard(sq+=9))
+		{
+			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
+			if(!search)
+				continue;
+			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
+				influence ++;
+			else
+				search=FALSE;
+
+		}
 		score -= influence * BishopScore;
-
 	}
 	if(pos->pceNum[bB]>1)
 		score -= BishopPair;
-	
-	return score;
+
+	return score;	
 }

@@ -11,7 +11,7 @@ const int KingEndGame[64] = {
 };
 
 const int KingMiddleGame[64] = {	
-	0	,	20	,	20	,	-10	,	-10	,	0	,	20	,	5	,
+	15	,	25	,	20	,	-10	,	-10	,	0	,	20	,	10	,
 	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,
 	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
 	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
@@ -55,7 +55,7 @@ int EvalWhiteKingPawns(const S_BOARD *pos)
 		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
 			score += KingsPawns;
 		}
-		if(!(FileBBMask[file] & pos->pawns[BOTH]))
+		if(!(FileBBMask[file] & pos->pawns[WHITE]))
 			score += OpenFile;
 
 		if(FilesBrd[square] != FILE_H)
@@ -65,7 +65,7 @@ int EvalWhiteKingPawns(const S_BOARD *pos)
 			}
 		}
 		if(file+1<=FILE_H)
-			if(!(FileBBMask[file+1] & pos->pawns[BOTH]))
+			if(!(FileBBMask[file+1] & pos->pawns[WHITE]))
 				score += OpenFile;
 
 		if((FilesBrd[square] != FILE_A))
@@ -75,7 +75,7 @@ int EvalWhiteKingPawns(const S_BOARD *pos)
 			}
 		}
 		if(file-1>=FILE_A)
-			if(!(FileBBMask[file-1] & pos->pawns[BOTH]))
+			if(!(FileBBMask[file-1] & pos->pawns[WHITE]))
 				score += OpenFile;
 
 	}
@@ -102,7 +102,7 @@ int EvalBlackKingPawns(const S_BOARD *pos)
 		int file=FilesBrd[square];
 		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
 			score -= KingsPawns;
-		if(!(FileBBMask[file] & pos->pawns[BOTH]))
+		if(!(FileBBMask[file] & pos->pawns[BLACK]))
 			score -= OpenFile;
 		if(FilesBrd[square] != FILE_H)
 		{
@@ -110,7 +110,7 @@ int EvalBlackKingPawns(const S_BOARD *pos)
 				score -= KingsPawns;
 		}
 		if(file+1<=FILE_H)
-			if(!(FileBBMask[file+1] & pos->pawns[BOTH]))
+			if(!(FileBBMask[file+1] & pos->pawns[BLACK]))
 				score -= OpenFile;
 		
 		if((FilesBrd[square] != FILE_A))
@@ -119,7 +119,7 @@ int EvalBlackKingPawns(const S_BOARD *pos)
 				score -= KingsPawns;
 		}
 		if(file-1>=FILE_A)
-			if(!(FileBBMask[file-1] & pos->pawns[BOTH]))
+			if(!(FileBBMask[file-1] & pos->pawns[BLACK]))
 				score -= OpenFile;
 
 		

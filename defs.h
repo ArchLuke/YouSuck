@@ -152,7 +152,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
-#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 6 * PieceVal[wP])
+#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
@@ -199,6 +199,7 @@ void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *
 void AddPiece(const int sq, S_BOARD *pos, const int pce);
 void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull);
+int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side);
 void CheckUp(S_SEARCHINFO *info);
 void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 void ClearPiece(const int sq, S_BOARD *pos);
