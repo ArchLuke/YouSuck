@@ -152,6 +152,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
+#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
@@ -170,32 +171,26 @@ typedef struct {
 #define SQ120(sq64) (Sq64ToSq120[(sq64)])
 #define SQOFFBOARD(sq) (FilesBrd[(sq)]==OFFBOARD)
 
+U64 ClearMask[64];
+U64 SetMask[64];
+int Sq64ToSq120[64];
+int Sq120ToSq64[BRD_SQ_NUM];
+
+/*globals across files*/
 
 extern U64 BlackBackwardsMask[64];
 extern U64 BlackPassedMask[64];
-extern U64 CastleKeys[16];
-extern U64 ClearMask[64];
 extern U64 FileBBMask[8];
 extern U64 IsolatedMask[64];
-extern U64 PieceKeys[13][120];
 extern U64 RankBBMask[8];
-extern U64 SetMask[64];
-extern U64 SideKey;
-extern int Sq64ToSq120[64];
-extern int Sq120ToSq64[BRD_SQ_NUM];
 extern U64 WhiteBackwardsMask[64];
 extern U64 WhitePassedMask[64];
 
-extern char *line;
 extern int FilesBrd[BRD_SQ_NUM];
-extern int RanksBrd[BRD_SQ_NUM];
-extern int rootDepth;
-
+extern const int PieceVal[13];
 extern const int Mirror64[64];
-extern int PieceVal[13];
+extern int RanksBrd[BRD_SQ_NUM];
 
-S_BOARD pos[1];
-S_SEARCHINFO info[1];
 /* FUNCTIONS */
 void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 void AddEnPassantMoe( const S_BOARD *pos, int move, S_MOVELIST *list );
@@ -203,7 +198,7 @@ void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int
 void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 void AddPiece(const int sq, S_BOARD *pos, const int pce);
 void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info);
+int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull);
 void CheckUp(S_SEARCHINFO *info);
 void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 void ClearPiece(const int sq, S_BOARD *pos);
@@ -239,6 +234,7 @@ void InitSq120To64();
 int InputWaiting();
 int IsRepetition(const S_BOARD *pos);
 int MakeMove(S_BOARD *pos, int move);
+void MakeNullMove(S_BOARD *pos);
 int MoveExists(S_BOARD *pos, const int move);
 void MovePiece(const int from, const int to, S_BOARD *pos);
 int ParseFen(char *fen, S_BOARD *pos);
@@ -265,6 +261,7 @@ int SideValid(const int side);
 int SqOnBoard(const int sq);
 void StorePvMove(const S_BOARD *pos, const int move);
 void TakeMove(S_BOARD *pos);
+void TakeNullMove(S_BOARD *pos);
 void Uci_Loop();
 void UpdateListsMaterial(S_BOARD *pos);
 #endif

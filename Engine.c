@@ -5,24 +5,22 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <unistd.h>
+
 U64 BlackBackwardsMask[64];
 U64 BlackPassedMask[64];
-U64 CastleKeys[16];
-U64 ClearMask[64];
 U64 FileBBMask[8];
 U64 IsolatedMask[64];
-U64 PieceKeys[13][120];
 U64 RankBBMask[8];
-U64 SetMask[64];
-U64 SideKey;
-int Sq64ToSq120[64];
-int Sq120ToSq64[BRD_SQ_NUM];
 U64 WhiteBackwardsMask[64];
 U64 WhitePassedMask[64];
-char *line;
+
+U64 CastleKeys[16];
+U64 PieceKeys[13][120];
+U64 SideKey;
+
 int FilesBrd[BRD_SQ_NUM];
+char *line;
 int RanksBrd[BRD_SQ_NUM];
-int rootDepth;
 S_BOARD pos[1];
 S_SEARCHINFO info[1];
 
@@ -31,12 +29,28 @@ const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
 const int KnDir[8] = { -8, -19,	-21, -12, 8, 19, 21, 12 };
 const int RkDir[4] = { -1, -10,	1, 10 };
+
 const int PvSize = 0x100000 * 2;
+
 const int BitTable[64] = {
   63, 30, 3, 32, 25, 41, 22, 33, 15, 50, 42, 13, 11, 53, 19, 34, 61, 29, 2,
   51, 21, 43, 45, 10, 18, 47, 1, 54, 9, 57, 0, 35, 62, 31, 40, 4, 49, 5, 52,
   26, 60, 6, 23, 44, 46, 27, 56, 16, 7, 39, 48, 24, 59, 14, 12, 55, 38, 28,
   58, 20, 37, 17, 36, 8
+};
+const int CastlePerm[120] = {
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 13, 15, 15, 15, 12, 15, 15, 14, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15,  7, 15, 15, 15,  3, 15, 15, 11, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15
 };
 const int LoopNonSlideIndex[2] = { 0, 3 };
 const int LoopNonSlidePce[6] = {
@@ -67,43 +81,26 @@ const int PceDir[13][8] = {
 	{ -1, -10,	1, 10, -9, -11, 11, 9 },
 	{ -1, -10,	1, 10, -9, -11, 11, 9 }
 };
-const int CastlePerm[120] = {
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 13, 15, 15, 15, 12, 15, 15, 14, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15,  7, 15, 15, 15,  3, 15, 15, 11, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-    15, 15, 15, 15, 15, 15, 15, 15, 15, 15
-};
 const int VictimScore[13] = { 0, 100, 200, 300, 400, 500, 600, 100, 200, 300, 400, 500, 600 };
 
-char FileChar[] = "abcdefgh";
-char PceChar[] = ".PNBRQKpnbrqk";
-char RankChar[] = "12345678";
-char SideChar[] = "wb-";
+const char FileChar[] = "abcdefgh";
+const char PceChar[] = ".PNBRQKpnbrqk";
+const char RankChar[] = "12345678";
+const char SideChar[] = "wb-";
 
-int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
-int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+const int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
+const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
-int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
-int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
-int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
-int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
+const int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
+const int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
+const int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
+const int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
 
-int FilesBrd[BRD_SQ_NUM];
-int RanksBrd[BRD_SQ_NUM];
-
-int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
-int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
-int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
-int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
-int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
+const int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
+const int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
+const int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
+const int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
+const int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
 
 
 void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
@@ -149,17 +146,17 @@ void AddPiece(const int sq, S_BOARD *pos, const int pce) {
 	
 	int col = PieceCol[pce];
 
-    HASH_PCE(pce,sq);
+        HASH_PCE(pce,sq);
 	
 	pos->pieces[sq] = pce;
 
-    if(PieceBig[pce]) {
-			pos->bigPce[col]++;
-		if(PieceMaj[pce]) {
+        if(PieceBig[pce]) {
+		pos->bigPce[col]++;
+	if(PieceMaj[pce]) {
 			pos->majPce[col]++;
-		} else {
+	} else {
 			pos->minPce[col]++;
-		}
+	}
 	} else {
 		SETBIT(pos->pawns[col],SQ64(sq));
 		SETBIT(pos->pawns[BOTH],SQ64(sq));
@@ -182,7 +179,7 @@ void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 	}
 	list->count++;
 }
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) {
+int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
 
 	
 	if(depth == 0) {
@@ -202,15 +199,32 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) 
 	if(pos->ply > MAXDEPTH - 1) {
 		return EvalPosition(pos);
 	}
+	int InCheck = SqAttacked(pos->KingSq[pos->side],pos->side^1,pos);
 	
+	if(InCheck == TRUE) {
+		depth++;
+	}
+	int Score = -INFINITE;
+	
+	if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
+		MakeNullMove(pos);
+		Score = -AlphaBeta( -beta, -beta + 1, depth-4, pos, info, FALSE);
+		TakeNullMove(pos);
+		if(info->stopped == TRUE) {
+			return 0;
+		}
+		if (Score >= beta) {		 
+		  return beta;
+		}	
+	}	
 	S_MOVELIST list[1];
-    GenerateAllMoves(pos,list,0);
+   	GenerateAllMoves(pos,list,0);
       
-    int MoveNum = 0;
+    	int MoveNum = 0;
 	int Legal = 0;
 	int OldAlpha = alpha;
 	int BestMove = NOMOVE;
-	int Score = -INFINITE;
+	Score = -INFINITE;
 	int PvMove = ProbePvTable(pos);
 	
 	if( PvMove != NOMOVE ) {
@@ -231,7 +245,7 @@ int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) 
         }
         
 		Legal++;
-		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info);		
+		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE);		
         TakeMove(pos);
 		
 		if(info->stopped == TRUE) {
@@ -962,14 +976,32 @@ int MakeMove(S_BOARD *pos, int move) {
     }
 	
 	return TRUE;
-	
+}	
+void MakeNullMove(S_BOARD *pos) {
+
+    pos->ply++;
+    pos->history[pos->hisPly].posKey = pos->posKey;
+
+    if(pos->enPas != NO_SQ) HASH_EP;
+
+    pos->history[pos->hisPly].move = NOMOVE;
+    pos->history[pos->hisPly].fiftyMove = pos->fiftyMove;
+    pos->history[pos->hisPly].enPas = pos->enPas;
+    pos->history[pos->hisPly].castlePerm = pos->castlePerm;
+    pos->enPas = NO_SQ;
+
+    pos->side ^= 1;
+    pos->hisPly++;
+    HASH_SIDE;
+   
+    return;
 }
 int MoveExists(S_BOARD *pos, const int move) {
 	
 	S_MOVELIST list[1];
-    GenerateAllMoves(pos,list,0);
+        GenerateAllMoves(pos,list,0);
       
-    int MoveNum = 0;
+        int MoveNum = 0;
 	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
        
         if ( !MakeMove(pos,list->moves[MoveNum].move))  {
@@ -1110,7 +1142,7 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
     
 	int depth = -1, movestogo = 30,movetime = -1;
 	int time = -1, inc = 0;
-    char *ptr = NULL;
+        char *ptr = NULL;
 	info->timeset = FALSE;
 	
 	if ((ptr = strstr(line,"infinite"))) {
@@ -1571,7 +1603,7 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	// iterative deepening
 	for( currentDepth = 1; currentDepth <= info->depth; ++currentDepth ) {
 							// alpha	 beta
-		bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info);
+		bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info,TRUE);
 		
 		if(info->stopped == TRUE) {
 			break;
@@ -1733,6 +1765,24 @@ void TakeMove(S_BOARD *pos) {
     }
 	
 }
+
+void TakeNullMove(S_BOARD *pos) {
+
+    pos->hisPly--;
+    pos->ply--;
+
+    if(pos->enPas != NO_SQ) HASH_EP;
+
+    pos->castlePerm = pos->history[pos->hisPly].castlePerm;
+    pos->fiftyMove = pos->history[pos->hisPly].fiftyMove;
+    pos->enPas = pos->history[pos->hisPly].enPas;
+
+    if(pos->enPas != NO_SQ) HASH_EP;
+    pos->side ^= 1;
+    HASH_SIDE;
+  
+}
+
 void Uci_Loop() {
 	
 	while (TRUE) {

@@ -29,7 +29,7 @@ int EvalBlackKnight(const S_BOARD *pos)
 	int score=0;
 	for(pceNum = 0; pceNum < pos->pceNum[bN]; ++pceNum) {
 		sq = pos->pList[bN][pceNum];
-		score -= KnightTable[SQ64(sq)];
+		score -= KnightTable[MIRROR64(SQ64(sq))];
 	}
 	return score;
 }

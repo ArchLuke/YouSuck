@@ -30,7 +30,6 @@ const int Mirror64[64] = {
 8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
 0	,	1	,	2	,	3	,	4	,	5	,	6	,	7
 };
-#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 const int KingsPawns=-20;
 int EvalWhiteKing(const S_BOARD *pos)
 {

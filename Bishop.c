@@ -1,5 +1,6 @@
 #include "defs.h"
 const int BishopScore=2.5;
+const int BishopPair=20;
 int EvalWhiteBishop(const S_BOARD *pos)
 {
 	int influence;
@@ -50,8 +51,11 @@ int EvalWhiteBishop(const S_BOARD *pos)
 		}
 
 		score += influence * BishopScore;
-
+		
 	}
+	if(pos->pceNum[wB]>1)
+		score += BishopPair;
+
 	return score;	
 }
 int EvalBlackBishop(const S_BOARD *pos)
@@ -105,6 +109,9 @@ int EvalBlackBishop(const S_BOARD *pos)
 
 		score -= influence * BishopScore;
 
-	}	
+	}
+	if(pos->pceNum[bB]>1)
+		score -= BishopPair;
+	
 	return score;
 }
