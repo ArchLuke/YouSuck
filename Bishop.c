@@ -1,68 +1,45 @@
 #include "defs.h"
-const int BishopScore=3;
+const int bishopMobility=3;
 const int BishopPair=10;
+const int bishopCenterControl=5;
 
+//glboals
+const int BiDir[4];
 int EvalWhiteBishop(const S_BOARD *pos)
 {
-	int influence;
+	int pceNum;
 	int sq;
-	int pceNum;	
+	int index;
+	int t_sq;
 	int score=0;
-	int blackKing=pos->pList[bK][0];
-	int search=TRUE;
 	for(pceNum = 0; pceNum < pos->pceNum[wB]; ++pceNum) {
-		influence=0;
 		sq = pos->pList[wB][pceNum];
-		while(SqOnBoard(sq += 11))
-		{
-			score += CheckKingSquare(pos,sq, blackKing, WHITE);			
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		sq=pos->pList[wB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq-=11))
-		{
-			score += CheckKingSquare(pos,sq,blackKing,WHITE);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		sq=pos->pList[wB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq-=9))
-		{
-			score += CheckKingSquare(pos,sq,blackKing,WHITE);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
+		for(index = 0; index < 4; ++index) {
+			int dir = BiDir[index];
+			t_sq = sq + dir;
+			
+			while(SqOnBoard(t_sq)) {
+				if(t_sq == D4 || t_sq == D5 || t_sq==E4 || t_sq==E5)
+				{
+					score += bishopCenterControl;		
+				}				
+				if(pos->pieces[t_sq]==bP) 
+				{
+					if(pos->pieces[t_sq+11] == bP || pos->pieces[t_sq+9] == bP) {
+						break;
+					}	
+				}
+				if(pos->pieces[t_sq]==wP) 
+				{
+					if(pos->pieces[t_sq-11] == wP || pos->pieces[t_sq-9] == wP) {
+						break;
+					}	
+				}
 
+				t_sq += dir;
+				score += bishopMobility;
+			}
 		}
-		sq=pos->pList[wB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq+=9))
-		{
-			score += CheckKingSquare(pos,sq,blackKing,WHITE);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-
-		}
-
-		score += influence * BishopScore;
 	}
 	if(pos->pceNum[wB]>1)
 		score += BishopPair;
@@ -71,67 +48,42 @@ int EvalWhiteBishop(const S_BOARD *pos)
 }
 int EvalBlackBishop(const S_BOARD *pos)
 {
-	int influence;
+	int pceNum;
 	int sq;
-	int pceNum;	
+	int index;
+	int t_sq;
 	int score=0;
-	int whiteKing=pos->pList[wK][0];
-	int search=TRUE;
-	for(pceNum = 0; pceNum < pos->pceNum[wB]; ++pceNum) {
-		influence=0;
+	for(pceNum = 0; pceNum < pos->pceNum[bB]; ++pceNum) {
 		sq = pos->pList[bB][pceNum];
-		while(SqOnBoard(sq += 11))
-		{
-			score -= CheckKingSquare(pos,sq, whiteKing,BLACK);			
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		sq=pos->pList[bB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq-=11))
-		{
-			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		sq=pos->pList[bB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq-=9))
-		{
-			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
+		for(index = 0; index < 4; ++index) {
+			int dir = BiDir[index];
+			t_sq = sq + dir;
+			while(SqOnBoard(t_sq)) {
+				if(t_sq == D4 || t_sq == D5 || t_sq==E4 || t_sq==E5)
+				{
+					score += bishopCenterControl;		
+				}					
+				if(pos->pieces[t_sq]==bP) 
+				{
+					if(pos->pieces[t_sq+11] == bP || pos->pieces[t_sq+9] == bP) {
+						break;
+					}	
+				}
+				if(pos->pieces[t_sq]==wP) 
+				{
+					if(pos->pieces[t_sq-11] == wP || pos->pieces[t_sq-9] == wP) {
+						break;
+					}	
+				}
 
+				t_sq += dir;
+				score += bishopMobility;
+			}
 		}
-		sq=pos->pList[bB][pceNum];
-		search=TRUE;
-		while(SqOnBoard(sq+=9))
-		{
-			score -= CheckKingSquare(pos,sq,whiteKing,BLACK);
-			if(!search)
-				continue;
-			if(pos->pieces[sq] != wP && pos->pieces[sq] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-
-		}
-		score -= influence * BishopScore;
 	}
 	if(pos->pceNum[bB]>1)
-		score -= BishopPair;
+		score += BishopPair;
 
-	return score;	
+	return -score;	
+
 }

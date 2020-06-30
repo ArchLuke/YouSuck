@@ -175,16 +175,22 @@ U64 ClearMask[64];
 U64 SetMask[64];
 int Sq64ToSq120[64];
 int Sq120ToSq64[BRD_SQ_NUM];
-
 /*globals across files*/
 
 extern U64 BlackBackwardsMask[64];
+extern U64 BlackOutpostMask[64];
 extern U64 BlackPassedMask[64];
 extern U64 FileBBMask[8];
 extern U64 IsolatedMask[64];
 extern U64 RankBBMask[8];
 extern U64 WhiteBackwardsMask[64];
+extern U64 WhiteOutpostMask[64];
 extern U64 WhitePassedMask[64];
+
+extern const int BiDir[4];
+extern const int KiDir[8];
+extern const int KnDir[8];
+extern const int RkDir[4];
 
 extern int FilesBrd[BRD_SQ_NUM];
 extern const int PieceVal[13];
@@ -255,7 +261,7 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
 static void ReadInput(S_SEARCHINFO *info);
 static void ResetBoard(S_BOARD *pos); 
 static void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
-static int SqAttacked(const int sq, const int side, const S_BOARD *pos);
+int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 static int SideValid(const int side);
 int SqOnBoard(const int sq);
 static void StorePvMove(const S_BOARD *pos, const int move);

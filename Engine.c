@@ -6,31 +6,48 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+//global initializations
 U64 BlackBackwardsMask[64];
+U64 BlackOutpostMask[64];
 U64 BlackPassedMask[64];
 U64 FileBBMask[8];
 U64 IsolatedMask[64];
 U64 RankBBMask[8];
 U64 WhiteBackwardsMask[64];
+U64 WhiteOutpostMask[64];
 U64 WhitePassedMask[64];
 
-U64 CastleKeys[16];
-U64 PieceKeys[13][120];
-U64 SideKey;
-
-int FilesBrd[BRD_SQ_NUM];
-char *line;
-const int TargetKing=5;
-int RanksBrd[BRD_SQ_NUM];
-S_BOARD pos[1];
-S_SEARCHINFO info[1];
-
-const int Castle=5;
 const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
 const int KnDir[8] = { -8, -19,	-21, -12, 8, 19, 21, 12 };
 const int RkDir[4] = { -1, -10,	1, 10 };
 
+int FilesBrd[BRD_SQ_NUM];
+const int Mirror64[64] = {
+56	,	57	,	58	,	59	,	60	,	61	,	62	,	63	,
+48	,	49	,	50	,	51	,	52	,	53	,	54	,	55	,
+40	,	41	,	42	,	43	,	44	,	45	,	46	,	47	,
+32	,	33	,	34	,	35	,	36	,	37	,	38	,	39	,
+24	,	25	,	26	,	27	,	28	,	29	,	30	,	31	,
+16	,	17	,	18	,	19	,	20	,	21	,	22	,	23	,
+8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
+0	,	1	,	2	,	3	,	4	,	5,	6	,	7
+};
+const int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
+int RanksBrd[BRD_SQ_NUM];
+
+
+//local variables
+U64 CastleKeys[16];
+U64 PieceKeys[13][120];
+U64 SideKey;
+
+char *line;
+const int TargetKing=5;
+S_BOARD pos[1];
+S_SEARCHINFO info[1];
+
+const int Castle=5;
 const int PvSize = 0x100000 * 2;
 
 const int BitTable[64] = {
@@ -95,7 +112,6 @@ const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 const int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
 const int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 const int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
-const int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
 
 const int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
 const int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
@@ -413,9 +429,61 @@ static int CountBits(U64 b) {
   for(r = 0; b; r++, b &= b - 1);
   return r;
 }
+
+const int PawnIsolated = -10;
+const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
+const int RookOpenFile = 10;
+const int RookSemiOpenFile = 5;
+const int QueenOpenFile = 5;
+const int QueenSemiOpenFile = 3;
+
+const int PawnTable[64] = {
+0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,
+10	,	10	,	0	,	-10	,	-10	,	0	,	10	,	10	,
+5	,	0	,	0	,	5	,	5	,	0	,	0	,	5	,
+0	,	0	,	10	,	20	,	20	,	10	,	0	,	0	,
+5	,	5	,	5	,	10	,	10	,	5	,	5	,	5	,
+10	,	10	,	10	,	20	,	20	,	10	,	10	,	10	,
+20	,	20	,	20	,	30	,	30	,	20	,	20	,	20	,
+0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
+};
+
+
+const int RookTable[64] = {
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+25	,	25	,	25	,	25	,	25	,	25	,	25	,	25	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0		
+};
+
+const int KingE[64] = {	
+	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	,
+	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
+	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
+	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
+	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
+	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
+	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
+	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	
+};
+
+const int KingO[64] = {	
+	0	,	5	,	5	,	-10	,	-10	,	0	,	10	,	5	,
+	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
+	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70		
+};
 static int EvalPosition(const S_BOARD *pos) {
 
-	int score = pos->material[WHITE] - pos->material[BLACK];
+/*	int score = pos->material[WHITE] - pos->material[BLACK];
 	
 	if(pos->castlePerm & WKCA)
 		score += Castle;
@@ -443,7 +511,101 @@ static int EvalPosition(const S_BOARD *pos) {
 		return score;
 	} else {
 		return -score;
+	}*/
+
+	int pce;
+	int pceNum;
+	int sq;
+	int score = pos->material[WHITE] - pos->material[BLACK];
+	
+	pce = wP;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += PawnTable[SQ64(sq)];	
+		
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			//printf("wP Iso:%s\n",PrSq(sq));
+			score += PawnIsolated;
+		}
+		
+		if( (WhitePassedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			//printf("wP Passed:%s\n",PrSq(sq));
+			score += PawnPassed[RanksBrd[sq]];
+		}
+		
 	}	
+
+	pce = bP;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= PawnTable[MIRROR64(SQ64(sq))];	
+		
+		if( (IsolatedMask[SQ64(sq)] & pos->pawns[BLACK]) == 0) {
+			//printf("bP Iso:%s\n",PrSq(sq));
+			score -= PawnIsolated;
+		}
+		
+		if( (BlackPassedMask[SQ64(sq)] & pos->pawns[WHITE]) == 0) {
+			//printf("bP Passed:%s\n",PrSq(sq));
+			score -= PawnPassed[7 - RanksBrd[sq]];
+		}
+	}
+	
+	score += EvalWhiteKnight(pos);
+	score += EvalBlackKnight(pos);
+
+	score += EvalBlackBishop(pos);
+	score += EvalWhiteBishop(pos);
+
+	pce = wR;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score += RookTable[SQ64(sq)];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score += RookOpenFile;
+		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
+			score += RookSemiOpenFile;
+		}
+	}	
+
+	pce = bR;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		score -= RookTable[MIRROR64(SQ64(sq))];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score -= RookOpenFile;
+		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
+			score -= RookSemiOpenFile;
+		}
+	}	
+	
+	pce = wQ;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score += QueenOpenFile;
+		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
+			score += QueenSemiOpenFile;
+		}
+	}	
+
+	pce = bQ;	
+	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
+		sq = pos->pList[pce][pceNum];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score -= QueenOpenFile;
+		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
+			score -= QueenSemiOpenFile;
+		}
+	}
+	//8/p6k/6p1/5p2/P4K2/8/5pB1/8 b - - 2 62 
+
+	if(pos->side == WHITE) {
+		return score;
+	} else {
+		return -score;
+	}		
 }
 static int FileRankValid(const int fr) {
 	return (fr >= 0 && fr <= 7) ? 1 : 0;
@@ -798,6 +960,12 @@ void InitEvalMasks() {
 			tsq -= 8;
 		    }
 		}
+	}
+	for(sq=0;sq<64;sq++)
+	{
+		int file=FilesBrd[SQ120(sq)];
+		WhiteOutpostMask[sq] = WhitePassedMask[sq] ^ (FileBBMask[file] & WhitePassedMask[sq]);
+		BlackOutpostMask[sq] = BlackPassedMask[sq] ^ (FileBBMask[file] & BlackPassedMask[sq]);
 	}
 }
 static
@@ -1391,7 +1559,7 @@ void PrintBoard(const S_BOARD *pos) {
 }
 static
 void PrintPositionalEvals(S_BOARD *pos)
-{
+{/*
 	int score=0;	
 	
 	if(pos->castlePerm & WKCA)
@@ -1439,8 +1607,22 @@ void PrintPositionalEvals(S_BOARD *pos)
 
 	score=EvalBlackKingPawns(pos);
 	printf("Black King's pawn score is %d\n", score);	
-			
+*/			
 	
+	int score=0;
+	score=EvalWhiteKnight(pos);
+	printf("White Knight score is %d \n", score);
+
+	score=EvalBlackKnight(pos);		
+	printf("Black knight score is %d \n", score);
+
+	score=EvalWhiteBishop(pos);
+	printf("white bishop score is %d \n", score);
+
+	score=EvalBlackBishop(pos);
+	printf("Black bishop score is %d \n", score);
+
+
 }
 static
 char *PrMove(const int move) {
@@ -1663,7 +1845,6 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	printf("bestmove %s\n",PrMove(bestMove));	
 
 }
-static
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 
 	int pce,index,t_sq,dir;
