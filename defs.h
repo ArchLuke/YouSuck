@@ -9,6 +9,9 @@ typedef unsigned long long U64;
 
 
 #define BRD_SQ_NUM 120
+#define INFINITE 30000
+#define INPUTBUFFER 2560
+#define MATE 29000
 #define NOMOVE 0
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -118,13 +121,6 @@ typedef struct {
 
 } S_SEARCHINFO;	
 
-#define HASH_CA (pos->posKey ^= (CastleKeys[(pos->castlePerm)]))
-#define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
-#define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
-#define HASH_SIDE (pos->posKey ^= (SideKey))
-#define INFINITE 30000
-#define INPUTBUFFER 2560
-#define MATE 29000
 
 /* GAME MOVE */
 
@@ -154,6 +150,10 @@ typedef struct {
 #define CNT(b) CountBits(b)
 #define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
+#define HASH_CA (pos->posKey ^= (CastleKeys[(pos->castlePerm)]))
+#define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
+#define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
+#define HASH_SIDE (pos->posKey ^= (SideKey))
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
 #define IsKn(p) (PieceKnight[(p)])
@@ -192,77 +192,75 @@ extern const int Mirror64[64];
 extern int RanksBrd[BRD_SQ_NUM];
 
 /* FUNCTIONS */
-void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-void AddEnPassantMoe( const S_BOARD *pos, int move, S_MOVELIST *list );
-void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) ;
-void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
-void AddPiece(const int sq, S_BOARD *pos, const int pce);
-void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull);
+static void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list );
+static void AddEnPassantMoe( const S_BOARD *pos, int move, S_MOVELIST *list );
+static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) ;
+static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
+static void AddPiece(const int sq, S_BOARD *pos, const int pce);
+static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull); 
 int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side);
-void CheckUp(S_SEARCHINFO *info);
-void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
-void ClearPiece(const int sq, S_BOARD *pos);
-void ClearPvTable(S_PVTABLE *table);
-void Console_Loop();
-int CountBits(U64 b);
+static void CheckUp(S_SEARCHINFO *info);
+static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
+static void ClearPiece(const int sq, S_BOARD *pos);
+static void ClearPvTable(S_PVTABLE *table);
+static void Console_Loop();
+static int CountBits(U64 b);
 int EvalBlackBishop(const S_BOARD *pos);
 int EvalBlackKing(const S_BOARD *pos);
 int EvalBlackKingPawns(const S_BOARD *pos);
 int EvalBlackKnight(const S_BOARD *pos);
 int EvalBlackPawns(const S_BOARD *pos);
 int EvalBlackRook(const S_BOARD *pos);
-int EvalPosition(const S_BOARD *pos);
+static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);
 int EvalWhiteKing(const S_BOARD *pos);
 int EvalWhiteKingPawns(const S_BOARD *pos);
 int EvalWhiteKnight(const S_BOARD *pos);
 int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
-int FileRankValid(const int fr);
-void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
-U64 GeneratePosKey(const S_BOARD *pos);
-int GetPvLine(const int depth, S_BOARD *pos);
-int GetTimeMs();
-void Init();
-void InitBitMasks();
-void InitEvalMasks();
-void InitFilesRanksBrd();
-void InitHashKeys();
-int InitMvvLva();
-void InitPvTable(S_PVTABLE *table);
-void InitSq120To64();
-int InputWaiting();
-int IsRepetition(const S_BOARD *pos);
-int MakeMove(S_BOARD *pos, int move);
-void MakeNullMove(S_BOARD *pos);
-int MoveExists(S_BOARD *pos, const int move);
-void MovePiece(const int from, const int to, S_BOARD *pos);
-int ParseFen(char *fen, S_BOARD *pos);
-void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos);
-void ParsePosition(char* lineIn, S_BOARD *pos);
-int ParseMove(char *ptrChar, S_BOARD *pos);
-void PickNextMove(int moveNum, S_MOVELIST *list);
-int PieceValid(const int pce);
-int PieceValidEmpty(const int pce);
-int PopBit(U64 *bb);
+static int FileRankValid(const int fr);
+static void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
+static U64 GeneratePosKey(const S_BOARD *pos);
+static int GetPvLine(const int depth, S_BOARD *pos);
+static int GetTimeMs();
+static void Init();
+static void InitBitMasks();
+static void InitEvalMasks();
+static void InitFilesRanksBrd();
+static void InitHashKeys();
+static int InitMvvLva();
+static void InitPvTable(S_PVTABLE *table);
+static void InitSq120To64();
+static int InputWaiting();
+static int IsRepetition(const S_BOARD *pos);
+static int MakeMove(S_BOARD *pos, int move);
+static void MakeNullMove(S_BOARD *pos);
+static int MoveExists(S_BOARD *pos, const int move);
+static void MovePiece(const int from, const int to, S_BOARD *pos);
+static int ParseFen(char *fen, S_BOARD *pos);
+static void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos);
+static void ParsePosition(char* lineIn, S_BOARD *pos);
+static int ParseMove(char *ptrChar, S_BOARD *pos);
+static void PickNextMove(int moveNum, S_MOVELIST *list);
+static int PieceValid(const int pce);
+static int PieceValidEmpty(const int pce);
+static int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
 void PrintBoard(const S_BOARD *pos);
-void PrintPositionalEvals(S_BOARD *pos);
-char * PrMove(const int move);
-int PopBit(U64 *bb);
-void PrintBitBoard(U64 bb);
-int ProbePvTable(const S_BOARD *pos);
-int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
-void ReadInput(S_SEARCHINFO *info);
-void ResetBoard(S_BOARD *pos); 
-void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
-int SqAttacked(const int sq, const int side, const S_BOARD *pos);
-int SideValid(const int side);
+static void PrintPositionalEvals(S_BOARD *pos);
+static char * PrMove(const int move);
+static int ProbePvTable(const S_BOARD *pos);
+static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
+static void ReadInput(S_SEARCHINFO *info);
+static void ResetBoard(S_BOARD *pos); 
+static void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
+static int SqAttacked(const int sq, const int side, const S_BOARD *pos);
+static int SideValid(const int side);
 int SqOnBoard(const int sq);
-void StorePvMove(const S_BOARD *pos, const int move);
-void TakeMove(S_BOARD *pos);
-void TakeNullMove(S_BOARD *pos);
-void Uci_Loop();
-void UpdateListsMaterial(S_BOARD *pos);
+static void StorePvMove(const S_BOARD *pos, const int move);
+static void TakeMove(S_BOARD *pos);
+static void TakeNullMove(S_BOARD *pos);
+static void Uci_Loop();
+static void UpdateListsMaterial(S_BOARD *pos);
 #endif

@@ -104,14 +104,14 @@ const int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, 
 const int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
 
 
-void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+static void AddCaptureMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	list->moves[list->count].move = move;
 	list->moves[list->count].score = MvvLvaScores[CAPTURED(move)][pos->pieces[FROMSQ(move)]] + 1000000;
 	list->count++;
 }
 
-void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+static void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	
 	list->moves[list->count].move = move;
@@ -120,7 +120,7 @@ void AddEnPassantMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 }
 
 
-void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) {	
+static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int cap, S_MOVELIST *list ) {	
 	int side=pos->side;
 	if(RanksBrd[from] == (side?RANK_2:RANK_7)) {
 		AddCaptureMove(pos, MOVE(from,to,cap,(side?bQ:wQ),0), list);
@@ -131,7 +131,7 @@ void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int
 		AddCaptureMove(pos, MOVE(from,to,cap,EMPTY,0), list);
 	}
 }
- void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list ) {
+static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list ) {
 	int side=pos->side;
 	if(RanksBrd[from] == (side?RANK_2:RANK_7)) {
 		AddQuietMove(pos, MOVE(from,to,EMPTY,(side?bQ:wQ),0), list);
@@ -142,7 +142,7 @@ void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, const int
 		AddQuietMove(pos, MOVE(from,to,EMPTY,EMPTY,0), list);
 	}
 }
-void AddPiece(const int sq, S_BOARD *pos, const int pce) {
+static void AddPiece(const int sq, S_BOARD *pos, const int pce) {
 
 	
 	int col = PieceCol[pce];
@@ -167,7 +167,7 @@ void AddPiece(const int sq, S_BOARD *pos, const int pce) {
 	pos->pList[pce][pos->pceNum[pce]++] = sq;
 	
 }
-void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
+static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 
 	list->moves[list->count].move = move;
 	
@@ -180,7 +180,7 @@ void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 	}
 	list->count++;
 }
-int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
 
 	
 	if(depth == 0) {
@@ -301,7 +301,7 @@ int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side)
 	}
 	return 0;
 }
-void CheckUp(S_SEARCHINFO *info) {
+static void CheckUp(S_SEARCHINFO *info) {
 	// .. check if time up, or interrupt from GUI
 	if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
 		info->stopped = TRUE;
@@ -309,7 +309,7 @@ void CheckUp(S_SEARCHINFO *info) {
 		
 	ReadInput(info);
 }
-void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
+static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 	
 	int index = 0;
 	int index2 = 0;
@@ -334,7 +334,7 @@ void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 	info->fh = 0;
 	info->fhf = 0;
 }
-void ClearPiece(const int sq, S_BOARD *pos) {
+static void ClearPiece(const int sq, S_BOARD *pos) {
 
 	
     int pce = pos->pieces[sq];
@@ -374,7 +374,7 @@ void ClearPiece(const int sq, S_BOARD *pos) {
 	pos->pList[pce][t_pceNum] = pos->pList[pce][pos->pceNum[pce]];
   
 }
-void ClearPvTable(S_PVTABLE *table) {
+static void ClearPvTable(S_PVTABLE *table) {
 
   S_PVENTRY *pvEntry;
 
@@ -383,7 +383,7 @@ void ClearPvTable(S_PVTABLE *table) {
     pvEntry->move = NOMOVE;
   }
 }
-void Console_Loop()
+static void Console_Loop()
 {
 	printf("mode is console\n");
 	while(1)
@@ -408,12 +408,12 @@ void Console_Loop()
 		}
 	}
 }
-int CountBits(U64 b) {
+static int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
   return r;
 }
-int EvalPosition(const S_BOARD *pos) {
+static int EvalPosition(const S_BOARD *pos) {
 
 	int score = pos->material[WHITE] - pos->material[BLACK];
 	
@@ -445,9 +445,11 @@ int EvalPosition(const S_BOARD *pos) {
 		return -score;
 	}	
 }
-int FileRankValid(const int fr) {
+static int FileRankValid(const int fr) {
 	return (fr >= 0 && fr <= 7) ? 1 : 0;
-}void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
+}
+static
+void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 	
 	
 	list->count = 0;	
@@ -617,7 +619,7 @@ int FileRankValid(const int fr) {
 
 
 
-U64 GeneratePosKey(const S_BOARD *pos) {
+static U64 GeneratePosKey(const S_BOARD *pos) {
 
 	int sq = 0;
 	U64 finalKey = 0;
@@ -643,6 +645,7 @@ U64 GeneratePosKey(const S_BOARD *pos) {
 	
 	return finalKey;
 }
+static
 int GetPvLine(const int depth, S_BOARD *pos) {
 
 
@@ -668,13 +671,14 @@ int GetPvLine(const int depth, S_BOARD *pos) {
 	return count;
 	
 }
+static
 int GetTimeMs() { 
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec*1000 + t.tv_usec/1000;
 }
 
-
+static
 void Init() {
 	InitSq120To64();	
 	InitBitMasks();
@@ -684,7 +688,7 @@ void Init() {
 	InitEvalMasks();
 }
 
-
+static
 void InitBitMasks() {
 	int index = 0;
 	
@@ -698,6 +702,7 @@ void InitBitMasks() {
 		ClearMask[index] = ~SetMask[index];
 	}
 }
+static
 void InitEvalMasks() {
 
 	int sq, tsq, r, f;
@@ -795,6 +800,7 @@ void InitEvalMasks() {
 		}
 	}
 }
+static
 void InitFilesRanksBrd() {
 	
 	int index = 0;
@@ -816,7 +822,7 @@ void InitFilesRanksBrd() {
 		}
 	}
 }
-
+static
 void InitHashKeys() {
 	
 	int index = 0;
@@ -832,7 +838,7 @@ void InitHashKeys() {
 	}
 
 }
-
+static
 int InitMvvLva() {
 	int Attacker;
 	int Victim;
@@ -842,6 +848,7 @@ int InitMvvLva() {
 		}
 	}		
 }
+static
 void InitPvTable(S_PVTABLE *table) {  
   
     table->numEntries = PvSize / sizeof(S_PVENTRY);
@@ -851,6 +858,7 @@ void InitPvTable(S_PVTABLE *table) {
     ClearPvTable(table);
 	
 }
+static
 void InitSq120To64() {
 
 	int index = 0;
@@ -875,6 +883,7 @@ void InitSq120To64() {
 		}
 	}
 }
+static
 int InputWaiting()
 {
   fd_set readfds;
@@ -886,6 +895,7 @@ int InputWaiting()
 
   return (FD_ISSET(fileno(stdin), &readfds));
 }
+static
 int IsRepetition(const S_BOARD *pos) {
 
 	int index = 0;
@@ -897,6 +907,7 @@ int IsRepetition(const S_BOARD *pos) {
 	}	
 	return FALSE;
 }
+static
 int MakeMove(S_BOARD *pos, int move) {
 
 	int from = FROMSQ(move);
@@ -989,7 +1000,8 @@ int MakeMove(S_BOARD *pos, int move) {
     }
 	
 	return TRUE;
-}	
+}
+static	
 void MakeNullMove(S_BOARD *pos) {
 
     pos->ply++;
@@ -1009,6 +1021,7 @@ void MakeNullMove(S_BOARD *pos) {
    
     return;
 }
+static
 int MoveExists(S_BOARD *pos, const int move) {
 	
 	S_MOVELIST list[1];
@@ -1027,6 +1040,7 @@ int MoveExists(S_BOARD *pos, const int move) {
     }
 	return FALSE;
 }
+static
 void MovePiece(const int from, const int to, S_BOARD *pos) {
 
 	int index = 0;
@@ -1056,7 +1070,7 @@ void MovePiece(const int from, const int to, S_BOARD *pos) {
 		}
 	}
 }
-
+static
 int ParseFen(char *fen, S_BOARD *pos)
 {
    	int  rank = RANK_8;
@@ -1151,6 +1165,7 @@ int ParseFen(char *fen, S_BOARD *pos)
 	
 	return 0;
 }
+static
 void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
     
 	int depth = -1, movestogo = 30,movetime = -1;
@@ -1213,6 +1228,7 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
 		time,info->starttime,info->stoptime,info->depth,info->timeset);
 	SearchPosition(pos, info);
 }
+static
 void ParsePosition(char* lineIn, S_BOARD *pos) {
 	
 	lineIn += 9;
@@ -1246,6 +1262,7 @@ void ParsePosition(char* lineIn, S_BOARD *pos) {
     }
 	PrintBoard(pos);	
 }
+static
 int ParseMove(char *ptrChar, S_BOARD *pos) {
 	printf("move to parse is %s", ptrChar);
 	if(ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
@@ -1286,7 +1303,7 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
     }
 printf("returned a move\n");	
     return NOMOVE;	
-}
+}static
 void PickNextMove(int moveNum, S_MOVELIST *list) {
 
 	S_MOVE temp;
@@ -1303,20 +1320,19 @@ void PickNextMove(int moveNum, S_MOVELIST *list) {
 	temp = list->moves[moveNum];
 	list->moves[moveNum] = list->moves[bestNum];
 	list->moves[bestNum] = temp;
-}
+}static
 int PieceValid(const int pce) {
 	return (pce >= wP && pce <= bK) ? 1 : 0;
-}
+}static
 int PieceValidEmpty(const int pce) {
 	return (pce >= EMPTY && pce <= bK) ? 1 : 0;
-}
+}static
 int PopBit(U64 *bb) {
   U64 b = *bb ^ (*bb - 1);
   unsigned int fold = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
   *bb &= (*bb - 1);
   return BitTable[(fold * 0x783a9b23) >> 26];
 }
-
 void PrintBitBoard(U64 bb) {
 
 	U64 shiftMe = 1ULL;
@@ -1373,6 +1389,7 @@ void PrintBoard(const S_BOARD *pos) {
 			);
 	printf("PosKey:%llX\n",pos->posKey);
 }
+static
 void PrintPositionalEvals(S_BOARD *pos)
 {
 	int score=0;	
@@ -1425,6 +1442,7 @@ void PrintPositionalEvals(S_BOARD *pos)
 			
 	
 }
+static
 char *PrMove(const int move) {
 
 	static char MvStr[6];
@@ -1451,6 +1469,7 @@ char *PrMove(const int move) {
 	}
 	return MvStr;
 }
+static
 int ProbePvTable(const S_BOARD *pos) {
 
 	int index = pos->posKey % pos->PvTable->numEntries;
@@ -1461,6 +1480,7 @@ int ProbePvTable(const S_BOARD *pos) {
 	
 	return NOMOVE;
 }
+static
 int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 
 	
@@ -1542,6 +1562,7 @@ int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 	
 	return alpha;
 }
+static
 void ReadInput(S_SEARCHINFO *info) {
 	int bytes;
   	char input[256] = "", *endc;
@@ -1562,6 +1583,7 @@ void ReadInput(S_SEARCHINFO *info) {
 		return;
     	}
 }
+static
 void ResetBoard(S_BOARD *pos) {
 
 	int index = 0;
@@ -1603,6 +1625,7 @@ void ResetBoard(S_BOARD *pos) {
 	pos->posKey = 0ULL;
 	
 }
+static
 void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	
 	int bestMove = NOMOVE;
@@ -1640,6 +1663,7 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	printf("bestmove %s\n",PrMove(bestMove));	
 
 }
+static
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 
 	int pce,index,t_sq,dir;
@@ -1708,12 +1732,14 @@ int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 	return FALSE;
 	
 }
+static
 int SideValid(const int side) {
 	return (side==WHITE || side == BLACK) ? 1 : 0;
 }
 int SqOnBoard(const int sq) {
 	return FilesBrd[sq]==OFFBOARD ? 0 : 1;
 }
+static
 void StorePvMove(const S_BOARD *pos, const int move) {
 
 	int index = pos->posKey % pos->PvTable->numEntries;
@@ -1721,6 +1747,7 @@ void StorePvMove(const S_BOARD *pos, const int move) {
 	pos->PvTable->pTable[index].move = move;
     pos->PvTable->pTable[index].posKey = pos->posKey;
 }
+static
 void TakeMove(S_BOARD *pos) {
 	
 	
@@ -1778,7 +1805,7 @@ void TakeMove(S_BOARD *pos) {
     }
 	
 }
-
+static
 void TakeNullMove(S_BOARD *pos) {
 
     pos->hisPly--;
@@ -1795,7 +1822,7 @@ void TakeNullMove(S_BOARD *pos) {
     HASH_SIDE;
   
 }
-
+static
 void Uci_Loop() {
 	
 	while (TRUE) {
@@ -1818,12 +1845,12 @@ void Uci_Loop() {
 		} else if (!strncmp(line, "quit", 4)) {
 		    info->quit = TRUE;
 		    break;
-		} else if (!strncmp(line, "uci", 3)) {
-			    }
+		}
 		if(info->quit) break;
 	}
 	free(pos->PvTable->pTable);
 }
+static
 void UpdateListsMaterial(S_BOARD *pos) {	
 	
 	int piece,sq,index,colour;
