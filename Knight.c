@@ -1,49 +1,51 @@
 #include "defs.h"
 /*evals*/
 const int knightMobility=3;
-const int undefendedMinor=-5;
 const int outpost=15;
-const int knightCenterControl=5;
-
+const int KnightTable[64] = {
+0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,
+0	,	0	,	5	,	5	,	5	,	5	,	0	,	0	,
+0	,	5	,	10	,	10	,	10	,	10	,	5	,	0	,
+0	,	5	,	10	,	10	,	10	,	10	,	5	,	0	,
+0	,	5	,	10	,	10	,	10	,	10	,	5	,	0	,
+0	,	5	,	10	,	10	,	10	,	10	,	5	,	0	,
+0	,	0	,	5	,	5	,	5	,	5	,	0	,	0	,
+0	,	0	,	0	,	0	,	0	,	0	,	0	,	0		
+};
 //globals
+U64 BlackKnightMobilityMask[64];
 U64 BlackOutpostMask[64];
-const int KiDir[8];
+U64 BlackPawnSupportMask[64];
+int KnightMobility[64];
+U64 WhiteKnightMobilityMask[64];
 U64 WhiteOutpostMask[64];
+U64 WhitePawnSupportMask[64];
+
 int EvalWhiteKnight(const S_BOARD *pos)
 {
 
-	int pceNum;
-	int index;
-	int sq;
-	int tempSq;
-	int score=0;
-
+	int pceNum, index, sq, sq64, score=0;
+	//loop through all the knights
 	for(pceNum = 0; pceNum < pos->pceNum[wN]; ++pceNum) {
 		sq = pos->pList[wN][pceNum];
+		sq64=SQ64(sq);
 //knight mobility
-		for(index = 0; index < 8; ++index) {		
-			tempSq = sq + KnDir[index];
-			if(SqOnBoard(tempSq)) {
-				if(tempSq == D4 || tempSq == D5 || tempSq==E4 || tempSq==E5)
-				{
-					score += knightCenterControl;		
-				}	
-				if(pos->pieces[tempSq+11] != bP && pos->pieces[tempSq+9] != bP)
-					score += knightMobility; 
-			}
-		}
-
-//undefended minor piece
-
-		if(!SqAttacked(sq,WHITE,pos))
-			score += undefendedMinor;
-//knight outpost.
-		 
+		//knight center control check
+		score += KnightTable[sq64];
+		//knight mobility check
+		
+		int squares=KnightMobility[sq64]-
+			CountBits(WhiteKnightMobilityMask[sq64] & pos->pawns[BLACK]);
+		score += (knightMobility*squares);
+//knight outpost using bitmasks
+		 //the knight needs to be in the enemy half of the board
 		if(RanksBrd[sq]>RANK_4)
 		{
-			if((pos->pawns[BLACK] & WhiteOutpostMask[SQ64(sq)])==0 && 
-			(pos->pieces[sq-9]==wP || pos->pieces[sq-11]==wP))
+			//no opposing black pawns to push the knight away, and the knight is supported by a white pawn
+			if((pos->pawns[BLACK] & WhiteOutpostMask[sq64])==0 && 
+			((WhitePawnSupportMask[sq64] & pos->pawns[WHITE]) != 0))
 			{
+				//add bonus to this knight for having an outpost
 				score += outpost;
 			}
 		}
@@ -51,44 +53,38 @@ int EvalWhiteKnight(const S_BOARD *pos)
 				
 		
 	}
-	return 1;
+	return score;
 }
 int EvalBlackKnight(const S_BOARD *pos)
 {
-
-	int pceNum;
-	int index;
-	int sq;
-	int tempSq;
-	int score=0;
-
+	int pceNum, index, sq, sq64, score=0;
+//loop through all the knights
 	for(pceNum = 0; pceNum < pos->pceNum[bN]; ++pceNum) {
 		sq = pos->pList[bN][pceNum];
+		sq64=SQ64(sq);
 //knight mobility
-		for(index = 0; index < 8; ++index) {		
-			tempSq = sq + KnDir[index];
-			if(SqOnBoard(tempSq)) {
-				if(tempSq == D4 || tempSq == D5 || tempSq==E4 || tempSq==E5)
-				{
-					score += knightCenterControl;		
-				}	
-				if(pos->pieces[tempSq-11] != wP && pos->pieces[tempSq-9] != wP)
-					score += knightMobility; 
+		//knight center control check
+		score += KnightTable[sq64];
+		//knight mobility check
+		
+		int squares=KnightMobility[sq64]-
+			CountBits(BlackKnightMobilityMask[sq64] & pos->pawns[WHITE]);
+		score += (knightMobility*squares);	
+//knight outpost using bitmasks
+		 //the knight needs to be in the enemy half of the board
+		if(RanksBrd[sq]<RANK_5)
+		{
+			//no opposing black pawns to push the knight away, and the knight is supported by a white pawn
+			if((pos->pawns[WHITE] & BlackOutpostMask[sq64])==0 && 
+			((BlackPawnSupportMask[sq64] & pos->pawns[BLACK]) != 0))
+			{
+				//add bonus to this knight for having an outpost
+				score += outpost;
 			}
 		}
 
-//undefended minor piece
-
-		if(!SqAttacked(sq,BLACK,pos))
-			score += undefendedMinor;
-		if(RanksBrd[sq]<RANK_5)
-		{
-			if((pos->pawns[WHITE] & BlackOutpostMask[SQ64(sq)])==0 && 
-			(pos->pieces[sq+9]==bP || pos->pieces[sq+11]==bP))
-				score += outpost;
-		}
-
-			
+				
+		
 	}
-	return -1;
+	return -score;
 }

@@ -8,14 +8,20 @@
 
 //global initializations
 U64 BlackBackwardsMask[64];
+U64 BlackKnightMobilityMask[64];
 U64 BlackOutpostMask[64];
 U64 BlackPassedMask[64];
+U64 BlackPawnSupportMask[64];
 U64 FileBBMask[8];
 U64 IsolatedMask[64];
+int KnightMobility[64];
+U64 KnightMobilityMask[64];
 U64 RankBBMask[8];
 U64 WhiteBackwardsMask[64];
+U64 WhiteKnightMobilityMask[64];
 U64 WhiteOutpostMask[64];
 U64 WhitePassedMask[64];
+U64 WhitePawnSupportMask[64];
 
 const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,	1, 10, -9, -11, 11, 9 };
@@ -424,7 +430,7 @@ static void Console_Loop()
 		}
 	}
 }
-static int CountBits(U64 b) {
+int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
   return r;
@@ -555,8 +561,8 @@ static int EvalPosition(const S_BOARD *pos) {
 	score += EvalWhiteKnight(pos);
 	score += EvalBlackKnight(pos);
 
-	score += EvalBlackBishop(pos);
-	score += EvalWhiteBishop(pos);
+//	score += EvalBlackBishop(pos);
+//	score += EvalWhiteBishop(pos);
 
 	pce = wR;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
@@ -867,7 +873,7 @@ void InitBitMasks() {
 static
 void InitEvalMasks() {
 
-	int sq, tsq, r, f;
+	int sq, tsq, r, f, index;
 		
 	for(sq = 0; sq < 8; ++sq) {		
         FileBBMask[sq] = 0ULL; 
@@ -961,12 +967,46 @@ void InitEvalMasks() {
 		    }
 		}
 	}
+
+//outpost masks
 	for(sq=0;sq<64;sq++)
 	{
 		int file=FilesBrd[SQ120(sq)];
 		WhiteOutpostMask[sq] = WhitePassedMask[sq] ^ (FileBBMask[file] & WhitePassedMask[sq]);
 		BlackOutpostMask[sq] = BlackPassedMask[sq] ^ (FileBBMask[file] & BlackPassedMask[sq]);
 	}
+//knight mobility mask
+	for(sq=0;sq<64;sq++)
+	{
+		for(index=0;index<8;index++)
+		{
+			tsq=SQ120(sq)+KnDir[index];
+			if(SqOnBoard(tsq))
+				KnightMobilityMask[sq] |= (1ULL<<(SQ64(tsq)));
+			if(SqOnBoard(tsq-11))
+				BlackKnightMobilityMask[sq] |= (1ULL<<(SQ64(tsq)-9));
+			if(SqOnBoard(tsq-9))
+				BlackKnightMobilityMask[sq] |= (1ULL<<(SQ64(tsq)-7));
+			if(SqOnBoard(tsq+11))
+				WhiteKnightMobilityMask[sq] |= (1ULL<<(SQ64(tsq)+9));
+			if(SqOnBoard(tsq+9))
+				WhiteKnightMobilityMask[sq] |= (1ULL<<(SQ64(tsq)+7));
+		}
+		KnightMobility[sq]=CountBits(KnightMobilityMask[sq]);
+	}
+//pawn support masks
+	for(sq=0;sq<64;sq++)
+	{
+		if(SqOnBoard(SQ120(sq)-11))
+			WhitePawnSupportMask[sq] |= (1ULL<<(sq-9));
+		if(SqOnBoard(SQ120(sq)-9))
+			WhitePawnSupportMask[sq] |= (1ULL<<(sq-7));
+		if(SqOnBoard(SQ120(sq)+11))
+			BlackPawnSupportMask[sq] |= (1ULL<<(sq+9));
+		if(SqOnBoard(SQ120(sq)+9))
+			BlackPawnSupportMask[sq] |= (1ULL<<(sq+7));
+
+	}	
 }
 static
 void InitFilesRanksBrd() {

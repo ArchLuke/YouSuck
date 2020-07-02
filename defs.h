@@ -178,19 +178,26 @@ int Sq120ToSq64[BRD_SQ_NUM];
 /*globals across files*/
 
 extern U64 BlackBackwardsMask[64];
+extern U64 BlackKnightMobilityMask[64];
 extern U64 BlackOutpostMask[64];
 extern U64 BlackPassedMask[64];
+extern U64 BlackPawnSupportMask[64];
 extern U64 FileBBMask[8];
 extern U64 IsolatedMask[64];
+extern int KnightMobility[64];
+extern U64 KnightMobilityMask[64];
 extern U64 RankBBMask[8];
 extern U64 WhiteBackwardsMask[64];
+extern U64 WhiteKnightMobilityMask[64];
 extern U64 WhiteOutpostMask[64];
 extern U64 WhitePassedMask[64];
+extern U64 WhitePawnSupportMask[64];
 
 extern const int BiDir[4];
 extern const int KiDir[8];
 extern const int KnDir[8];
 extern const int RkDir[4];
+
 
 extern int FilesBrd[BRD_SQ_NUM];
 extern const int PieceVal[13];
@@ -211,7 +218,7 @@ static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 static void ClearPiece(const int sq, S_BOARD *pos);
 static void ClearPvTable(S_PVTABLE *table);
 static void Console_Loop();
-static int CountBits(U64 b);
+int CountBits(U64 b);
 int EvalBlackBishop(const S_BOARD *pos);
 int EvalBlackKing(const S_BOARD *pos);
 int EvalBlackKingPawns(const S_BOARD *pos);
