@@ -7,17 +7,23 @@
 #include <unistd.h>
 
 //global initializations
+int BlackMaxDiagonalDistance[64][2];
+int DiagonalDistance[64][64];
+int KnightMobility[64];
+int WhiteMaxDiagonalDistance[64][2];
+
 U64 BlackBackwardsMask[64];
+U64 BlackBishopForwardMask[64][2]={0};
 U64 BlackKnightMobilityMask[64];
 U64 BlackOutpostMask[64];
 U64 BlackPassedMask[64];
 U64 BlackPawnSupportMask[64];
 U64 FileBBMask[8];
 U64 IsolatedMask[64];
-int KnightMobility[64];
 U64 KnightMobilityMask[64];
 U64 RankBBMask[8];
 U64 WhiteBackwardsMask[64];
+U64 WhiteBishopForwardMask[64][2]={0};
 U64 WhiteKnightMobilityMask[64];
 U64 WhiteOutpostMask[64];
 U64 WhitePassedMask[64];
@@ -39,6 +45,8 @@ const int Mirror64[64] = {
 8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
 0	,	1	,	2	,	3	,	4	,	5,	6	,	7
 };
+const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
 const int PieceVal[13]= { 0, 100, 325, 350, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
 int RanksBrd[BRD_SQ_NUM];
 
@@ -113,8 +121,6 @@ const char RankChar[] = "12345678";
 const char SideChar[] = "wb-";
 
 const int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
-const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
 const int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
 const int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 const int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
@@ -561,8 +567,8 @@ static int EvalPosition(const S_BOARD *pos) {
 	score += EvalWhiteKnight(pos);
 	score += EvalBlackKnight(pos);
 
-//	score += EvalBlackBishop(pos);
-//	score += EvalWhiteBishop(pos);
+	score += EvalBlackBishop(pos);
+	score += EvalWhiteBishop(pos);
 
 	pce = wR;	
 	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
@@ -967,6 +973,47 @@ void InitEvalMasks() {
 		    }
 		}
 	}
+// max Diagonal Distances
+	for(sq=0;sq<64;sq++)
+	{
+		tsq=SQ120(sq)+11;
+		while(SqOnBoard(tsq))
+		{
+			WhiteMaxDiagonalDistance[sq][0] ++;
+			tsq += 11;
+		}
+		tsq=SQ120(sq)+9;
+		while(SqOnBoard(tsq))
+		{
+			WhiteMaxDiagonalDistance[sq][1] ++;
+			tsq += 9;
+		}
+		tsq=SQ120(sq)-11;
+		while(SqOnBoard(tsq))
+		{
+			BlackMaxDiagonalDistance[sq][0] ++;
+			tsq -= 11;
+		}
+		tsq=SQ120(sq)-9;
+		while(SqOnBoard(tsq))
+		{
+			BlackMaxDiagonalDistance[sq][1] ++;
+			tsq -= 9;
+		}
+
+	}
+//diagonal distance
+	for(sq=0;sq<64;sq++)
+	{
+		for(tsq=0;tsq<64;tsq++)
+		{
+			if((tsq-sq)%9==0)
+				DiagonalDistance[sq][tsq]=(tsq-sq)/9;
+			else if((tsq-sq)%7==0)
+				DiagonalDistance[sq][tsq]=(tsq-sq)/7;
+
+		}	
+	}
 
 //outpost masks
 	for(sq=0;sq<64;sq++)
@@ -1006,7 +1053,38 @@ void InitEvalMasks() {
 		if(SqOnBoard(SQ120(sq)+9))
 			BlackPawnSupportMask[sq] |= (1ULL<<(sq+7));
 
-	}	
+	}
+//bishop forward masks
+	for (sq=0;sq<64;sq++)
+	{
+		//white forwards
+		tsq=SQ120(sq)+11;
+		while(SqOnBoard(tsq))
+		{
+			WhiteBishopForwardMask[sq][0] |= (1ULL<<(SQ64(tsq)));
+			tsq += 11;
+		}
+		tsq=SQ120(sq)+9;
+		while(SqOnBoard(tsq))
+		{
+			WhiteBishopForwardMask[sq][1] |= (1ULL<<(SQ64(tsq)));
+			tsq += 9;
+		}
+		//black forwards
+		tsq=SQ120(sq)-11;
+		while(SqOnBoard(tsq))
+		{
+			BlackBishopForwardMask[sq][0] |= (1ULL<<(SQ64(tsq)));
+			tsq -= 11;
+		}
+		tsq=SQ120(sq)-9;
+		while(SqOnBoard(tsq))
+		{
+			BlackBishopForwardMask[sq][1] |= (1ULL<<(SQ64(tsq)));
+			tsq -= 9;
+		}
+
+	}
 }
 static
 void InitFilesRanksBrd() {
@@ -1534,11 +1612,10 @@ int PieceValid(const int pce) {
 }static
 int PieceValidEmpty(const int pce) {
 	return (pce >= EMPTY && pce <= bK) ? 1 : 0;
-}static
-int PopBit(U64 *bb) {
-  U64 b = *bb ^ (*bb - 1);
+}
+int FindBit(U64 bb) {
+  U64 b = bb ^ (bb - 1);
   unsigned int fold = (unsigned) ((b & 0xffffffff) ^ (b >> 32));
-  *bb &= (*bb - 1);
   return BitTable[(fold * 0x783a9b23) >> 26];
 }
 void PrintBitBoard(U64 bb) {
@@ -1551,7 +1628,7 @@ void PrintBitBoard(U64 bb) {
 	int sq64 = 0;
 	
 	printf("\n");
-	for(rank = RANK_8; rank >= RANK_1; --rank) {
+	for(rank = RANK_1; rank <= RANK_8; ++rank) {
 		for(file = FILE_A; file <= FILE_H; ++file) {
 			sq = FR2SQ(file,rank);	// 120 based		
 			sq64 = SQ64(sq); // 64 based

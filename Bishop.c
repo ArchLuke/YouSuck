@@ -1,52 +1,58 @@
 #include "defs.h"
 const int bishopMobility=3;
 const int BishopPair=10;
-const int bishopCenterControl=5;
+const int BishopTable[64] = {
+5	,	5	,	0	,	0	,	0	,	0	,	5	,	5	,
+5	,	5	,	5	,	0	,	0	,	5	,	5	,	5	,
+0	,	5	,	5	,	5	,	5	,	5	,	5	,	0	,
+0	,	0	,	5	,	5	,	5	,	5	,	0	,	0	,
+0	,	0	,	5	,	5	,	5	,	5	,	0	,	0	,
+0	,	5	,	5	,	5	,	5	,	5	,	5	,	0	,
+5	,	5	,	5	,	0	,	0	,	5	,	5	,	5	,
+5	,	5	,	0	,	0	,	0	,	0	,	5	,	5	
+};
 
-//glboals
-const int BiDir[4];
+//globals
+U64 BlackBishopForwardMask[64][2];
+int BlaxMaxDiagonalDistance[64][2];
+int DiagonalDistance[64][64];
+U64 WhiteBishopForwardMask[64][2];
+int WhiteMaxDiagonalDistance[64][2];
+
 int EvalWhiteBishop(const S_BOARD *pos)
 {
 	int pceNum;
 	int sq;
 	int index;
-	int t_sq;
 	int score=0;
 //loop through all the white bishops
 	for(pceNum = 0; pceNum < pos->pceNum[wB]; ++pceNum) {
+		int mobility=7;
 		sq = pos->pList[wB][pceNum];
-		//loop through all the bishop move directions
-		for(index = 0; index < 4; ++index) {
-			int dir = BiDir[index];
-			t_sq = sq + dir;
-			//loop through all the moves in each direction
-			while(SqOnBoard(t_sq)) {
-				//if the bishop is controlling the center, add bonus
-				if(t_sq == D4 || t_sq == D5 || t_sq==E4 || t_sq==E5)
-				{
-					score += bishopCenterControl;		
-				}
-				//if the bishop is behind a black pawn chain, stop going through this direction			
-				if(pos->pieces[t_sq]==bP) 
-				{
-					if(pos->pieces[t_sq+11] == bP || pos->pieces[t_sq+9] == bP) {
-						break;
-					}	
-				}
-				//similarly to white pawn chains
-				if(pos->pieces[t_sq]==wP) 
-				{
-					if(pos->pieces[t_sq-11] == wP || pos->pieces[t_sq-9] == wP) {
-						break;
-					}	
-				}
-
-				t_sq += dir;
-
-				//add mobility score to the bishop
-				score += bishopMobility;
-			}
+		int sq64=SQ64(sq);
+//the bishop should be on diagonals that control the center
+		score += BishopTable[sq64];
+		
+		//check the diagonal influences
+		U64 mask=WhiteBishopForwardMask[sq64][0] & pos->pawns[BOTH];	
+		if(mask)
+		{
+			//int square=(63-__builtin_ctzll(mask));
+			int square=FindBit(mask);
+			mobility -= (WhiteMaxDiagonalDistance[sq64][0]-DiagonalDistance[sq][square]);
+				
 		}
+ 
+		U64 mask2=WhiteBishopForwardMask[sq64][1] & pos->pawns[BOTH];		
+		if(mask2)
+		{
+			//int square=(63-__builtin_ctzll(mask));
+			int square=FindBit(mask2);
+			mobility -= (WhiteMaxDiagonalDistance[sq64][1]-DiagonalDistance[sq64][square]);
+		}
+		score += mobility * bishopMobility;
+		
+				
 	}
 	//bishop pair
 	if(pos->pceNum[wB]>1)
@@ -59,39 +65,43 @@ int EvalBlackBishop(const S_BOARD *pos)
 	int pceNum;
 	int sq;
 	int index;
-	int t_sq;
 	int score=0;
-	for(pceNum = 0; pceNum < pos->pceNum[bB]; ++pceNum) {
-		sq = pos->pList[bB][pceNum];
-		for(index = 0; index < 4; ++index) {
-			int dir = BiDir[index];
-			t_sq = sq + dir;
-			while(SqOnBoard(t_sq)) {
-				if(t_sq == D4 || t_sq == D5 || t_sq==E4 || t_sq==E5)
-				{
-					score += bishopCenterControl;		
-				}					
-				if(pos->pieces[t_sq]==bP) 
-				{
-					if(pos->pieces[t_sq+11] == bP || pos->pieces[t_sq+9] == bP) {
-						break;
-					}	
-				}
-				if(pos->pieces[t_sq]==wP) 
-				{
-					if(pos->pieces[t_sq-11] == wP || pos->pieces[t_sq-9] == wP) {
-						break;
-					}	
-				}
 
-				t_sq += dir;
-				score += bishopMobility;
-			}
+//loop through all the black bishops
+	for(pceNum = 0; pceNum < pos->pceNum[bB]; ++pceNum) {
+		int mobility=7;
+		sq = pos->pList[bB][pceNum];
+		int sq64=SQ64(sq);
+//the bishop should be on diagonals that control the center
+		score += BishopTable[sq64];
+		
+		//check the diagonal influences
+		U64 mask=BlackBishopForwardMask[sq64][0] & pos->pawns[BOTH];
+		if(mask)
+		{
+		//	int square=FindBit(mask2);
+			int square=(63-__builtin_clzll(mask));
+
+			mobility -= (BlackMaxDiagonalDistance[sq64][0]-DiagonalDistance[square][sq64]);
+				
 		}
+
+		U64 mask2=BlackBishopForwardMask[sq64][1] & pos->pawns[BOTH];		
+
+		if(mask2)
+		{
+		//	int square=FindBit(mask2);
+			int square=(63-__builtin_clzll(mask2));
+			mobility -= (BlackMaxDiagonalDistance[sq64][1]-DiagonalDistance[square][sq64]);
+				
+		}
+
+		score += mobility * bishopMobility;				
 	}
+	//bishop pair
 	if(pos->pceNum[bB]>1)
 		score += BishopPair;
-
+	
 	return -score;	
 
 }

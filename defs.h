@@ -160,7 +160,6 @@ typedef struct {
 #define IsRQ(p) (PieceRookQueen[(p)])
 #define MIRROR64(sq) (Mirror64[(sq)])
 #define MOVE(f,t,ca,pro,fl) ( (f) | ((t) << 7) | ( (ca) << 14 ) | ( (pro) << 20 ) | (fl))
-#define POP(b) PopBit(b)
 #define RAND_64 ((U64)rand() | \
 		(U64)rand() << 15 | \
 		(U64)rand() << 30 | \
@@ -176,18 +175,23 @@ U64 SetMask[64];
 int Sq64ToSq120[64];
 int Sq120ToSq64[BRD_SQ_NUM];
 /*globals across files*/
+extern int BlackMaxDiagonalDistance[64][2];
+extern int DiagonalDistance[64][64];
+extern int KnightMobility[64];
+extern int WhiteMaxDiagonalDistance[64][2];
 
 extern U64 BlackBackwardsMask[64];
+extern U64 BlackBishopForwardMask[64][2];
 extern U64 BlackKnightMobilityMask[64];
 extern U64 BlackOutpostMask[64];
 extern U64 BlackPassedMask[64];
 extern U64 BlackPawnSupportMask[64];
 extern U64 FileBBMask[8];
 extern U64 IsolatedMask[64];
-extern int KnightMobility[64];
 extern U64 KnightMobilityMask[64];
 extern U64 RankBBMask[8];
 extern U64 WhiteBackwardsMask[64];
+extern U64 WhiteBishopForwardMask[64][2];
 extern U64 WhiteKnightMobilityMask[64];
 extern U64 WhiteOutpostMask[64];
 extern U64 WhitePassedMask[64];
@@ -200,6 +204,7 @@ extern const int RkDir[4];
 
 
 extern int FilesBrd[BRD_SQ_NUM];
+extern const int PieceCol[13];
 extern const int PieceVal[13];
 extern const int Mirror64[64];
 extern int RanksBrd[BRD_SQ_NUM];
@@ -233,6 +238,7 @@ int EvalWhiteKnight(const S_BOARD *pos);
 int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
 static int FileRankValid(const int fr);
+int FindBit(U64 b);
 static void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 static U64 GeneratePosKey(const S_BOARD *pos);
 static int GetPvLine(const int depth, S_BOARD *pos);
@@ -258,7 +264,6 @@ static int ParseMove(char *ptrChar, S_BOARD *pos);
 static void PickNextMove(int moveNum, S_MOVELIST *list);
 static int PieceValid(const int pce);
 static int PieceValidEmpty(const int pce);
-static int PopBit(U64 *bb);
 void PrintBitBoard(U64 bb);
 void PrintBoard(const S_BOARD *pos);
 static void PrintPositionalEvals(S_BOARD *pos);
