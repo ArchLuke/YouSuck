@@ -178,17 +178,16 @@ extern int DiagonalDistance[64][64];
 extern int KnightMobility[64];
 extern int WhiteMaxDiagonalDistance[64][2];
 
-extern U64 BlackBackwardsMask[64];
 extern U64 BlackBishopForwardMask[64][2];
 extern U64 BlackKnightMobilityMask[64];
 extern U64 BlackOutpostMask[64];
 extern U64 BlackPassedMask[64];
 extern U64 BlackPawnSupportMask[64];
+extern U64 DoubledPawnsMask[64];
 extern U64 FileBBMask[8];
 extern U64 IsolatedMask[64];
 extern U64 KnightMobilityMask[64];
 extern U64 RankBBMask[8];
-extern U64 WhiteBackwardsMask[64];
 extern U64 WhiteBishopForwardMask[64][2];
 extern U64 WhiteKnightMobilityMask[64];
 extern U64 WhiteOutpostMask[64];
