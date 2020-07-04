@@ -121,8 +121,6 @@ const char RankChar[] = "12345678";
 const char SideChar[] = "wb-";
 
 const int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
-const int PieceMaj[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE };
-const int PieceMin[13] = { FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE };
 const int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
 
 const int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
@@ -181,11 +179,7 @@ static void AddPiece(const int sq, S_BOARD *pos, const int pce) {
 
         if(PieceBig[pce]) {
 		pos->bigPce[col]++;
-	if(PieceMaj[pce]) {
-			pos->majPce[col]++;
-	} else {
-			pos->minPce[col]++;
-	}
+	
 	} else {
 		SETBIT(pos->pawns[col],SQ64(sq));
 		SETBIT(pos->pawns[BOTH],SQ64(sq));
@@ -378,12 +372,8 @@ static void ClearPiece(const int sq, S_BOARD *pos) {
     pos->material[col] -= PieceVal[pce];
 	
 	if(PieceBig[pce]) {
-			pos->bigPce[col]--;
-		if(PieceMaj[pce]) {
-			pos->majPce[col]--;
-		} else {
-			pos->minPce[col]--;
-		}
+		pos->bigPce[col]--;
+		
 	} else {
 		CLRBIT(pos->pawns[col],SQ64(sq));
 		CLRBIT(pos->pawns[BOTH],SQ64(sq));
@@ -444,10 +434,6 @@ int CountBits(U64 b) {
 
 const int PawnIsolated = -10;
 const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
-const int RookOpenFile = 10;
-const int RookSemiOpenFile = 5;
-const int QueenOpenFile = 5;
-const int QueenSemiOpenFile = 3;
 
 const int PawnTable[64] = {
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	,
@@ -460,17 +446,6 @@ const int PawnTable[64] = {
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0	
 };
 
-
-const int RookTable[64] = {
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
-25	,	25	,	25	,	25	,	25	,	25	,	25	,	25	,
-0	,	0	,	5	,	10	,	10	,	5	,	0	,	0		
-};
 
 const int KingE[64] = {	
 	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	,
@@ -494,36 +469,6 @@ const int KingO[64] = {
 	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70		
 };
 static int EvalPosition(const S_BOARD *pos) {
-
-/*	int score = pos->material[WHITE] - pos->material[BLACK];
-	
-	if(pos->castlePerm & WKCA)
-		score += Castle;
-	if(pos->castlePerm & WQCA)
-		score += Castle;
-	if(pos->castlePerm & BKCA)
-		score -= Castle;
-	if(pos->castlePerm & BQCA)
-		score -= Castle;
-		
-	score += EvalWhitePawns(pos);
-	score += EvalBlackPawns(pos);
-	score += EvalWhiteKnight(pos);
-	score += EvalBlackKnight(pos);
-	score += EvalWhiteRook(pos);
-	score += EvalBlackRook(pos);
-	score += EvalBlackBishop(pos);
-	score += EvalWhiteBishop(pos);
-	score += EvalWhiteKing(pos);
-	score += EvalWhiteKingPawns(pos);
-	score += EvalBlackKing(pos);
-	score += EvalBlackKingPawns(pos);
-
-	if(pos->side == WHITE) {
-		return score;
-	} else {
-		return -score;
-	}*/
 
 	int pce;
 	int pceNum;
@@ -570,48 +515,11 @@ static int EvalPosition(const S_BOARD *pos) {
 	score += EvalBlackBishop(pos);
 	score += EvalWhiteBishop(pos);
 
-	pce = wR;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score += RookTable[SQ64(sq)];
-		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			score += RookOpenFile;
-		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
-			score += RookSemiOpenFile;
-		}
-	}	
+	score += EvalWhiteRook(pos);
+	score += EvalBlackRook(pos);
 
-	pce = bR;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		score -= RookTable[MIRROR64(SQ64(sq))];
-		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			score -= RookOpenFile;
-		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
-			score -= RookSemiOpenFile;
-		}
-	}	
-	
-	pce = wQ;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			score += QueenOpenFile;
-		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
-			score += QueenSemiOpenFile;
-		}
-	}	
-
-	pce = bQ;	
-	for(pceNum = 0; pceNum < pos->pceNum[pce]; ++pceNum) {
-		sq = pos->pList[pce][pceNum];
-		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
-			score -= QueenOpenFile;
-		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
-			score -= QueenSemiOpenFile;
-		}
-	}
-	//8/p6k/6p1/5p2/P4K2/8/5pB1/8 b - - 2 62 
+	score += EvalWhiteQueen(pos);
+	score += EvalBlackQueen(pos);
 
 	if(pos->side == WHITE) {
 		return score;
@@ -1676,55 +1584,7 @@ void PrintBoard(const S_BOARD *pos) {
 }
 static
 void PrintPositionalEvals(S_BOARD *pos)
-{/*
-	int score=0;	
-	
-	if(pos->castlePerm & WKCA)
-		score += Castle;
-	if(pos->castlePerm & WQCA)
-		score += Castle;
-	if(pos->castlePerm & BKCA)
-		score -= Castle;
-	if(pos->castlePerm & BQCA)
-		score -= Castle;
-	printf("Castle scores is %d", score);
-
-	score=EvalWhitePawns(pos);
-	printf("White pawn score is %d\n", score);
-
-	score=EvalBlackPawns(pos);	
-	printf("Black pawn score is %d\n", score);
-
-	score=EvalWhiteKnight(pos);
-	printf("White Knight score is %d \n", score);
-
-	score=EvalBlackKnight(pos);		
-	printf("Black knight score is %d \n", score);
-	
-	score=EvalWhiteBishop(pos);
-	printf("white bishop score is %d \n", score);
-
-	score=EvalBlackBishop(pos);
-	printf("Black bishop score is %d \n", score);
-
-	score=EvalWhiteRook(pos);
-	printf("White rook score is %d \n", score);
-
-	score=EvalBlackRook(pos);
-	printf("Black rook score is %d \n", score);
-
-	score=EvalWhiteKing(pos);
-	printf("White king score is %d \n", score);
-	
-	score=EvalWhiteKingPawns(pos);
-	printf("White King's pawn score is %d\n", score);	
-
-	score=EvalBlackKing(pos);
-	printf("Black king score is %d\n", score);
-
-	score=EvalBlackKingPawns(pos);
-	printf("Black King's pawn score is %d\n", score);	
-*/			
+{	
 	
 	int score=0;
 	score=EvalWhiteKnight(pos);
@@ -1738,6 +1598,19 @@ void PrintPositionalEvals(S_BOARD *pos)
 
 	score=EvalBlackBishop(pos);
 	printf("Black bishop score is %d \n", score);
+
+	score=EvalWhiteRook(pos);
+	printf("white rook score is %d \n", score);
+
+	score=EvalBlackRook(pos);
+	printf("Black rook score is %d \n", score);
+
+	score=EvalWhiteQueen(pos);
+	printf("white queen score is %d \n", score);
+
+	score=EvalBlackQueen(pos);
+	printf("Black queen score is %d \n", score);
+
 
 
 }
@@ -1897,8 +1770,6 @@ void ResetBoard(S_BOARD *pos) {
 	
 	for(index = 0; index < 2; ++index) {
 		pos->bigPce[index] = 0;
-		pos->majPce[index] = 0;
-		pos->minPce[index] = 0;
 		pos->material[index] = 0;		
 	}
 	
@@ -2160,8 +2031,6 @@ void UpdateListsMaterial(S_BOARD *pos) {
 		    colour = PieceCol[piece];
 			
 		    if( PieceBig[piece] == TRUE) pos->bigPce[colour]++;
-		    if( PieceMin[piece] == TRUE) pos->minPce[colour]++;
-		    if( PieceMaj[piece] == TRUE) pos->majPce[colour]++;
 			if(piece==wK) pos->KingSq[WHITE] = sq;
 			else if(piece==bK) pos->KingSq[BLACK] = sq;	
 			else 

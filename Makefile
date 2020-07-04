@@ -1,2 +1,3 @@
 output:
-	gcc -Ofast Engine.c Knight.c Bishop.c -o YouSuck
+	gcc -Ofast Engine.c Queen.c Knight.c Bishop.c Rook.c -o YouSuck
+

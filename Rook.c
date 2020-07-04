@@ -1,95 +1,44 @@
 #include "defs.h"
-const int RookScore=3;
+
+const int RookOpenFile = 15;
+const int RookSemiOpenFile = 10;
+const int RookTable[64] = {
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+0	,	0	,	5	,	10	,	10	,	5	,	0	,	0	,
+25	,	25	,	25	,	25	,	25	,	25	,	25	,	25	,
+25	,	25	,	25	,	25	,	25	,	25	,	25	,	25		
+};
+
 int EvalWhiteRook(const S_BOARD *pos)
 {
-	int horizontal;
-	int vertical;
-	int influence;
-	int sq;
-	int pceNum;
-	int score=0;
-	int blackKing=pos->pList[bK][0];
-	int search=TRUE;
+	int pceNum, sq, score=0;
 	for(pceNum = 0; pceNum < pos->pceNum[wR]; ++pceNum) {
-		influence=0;
 		sq = pos->pList[wR][pceNum];
-		horizontal=FilesBrd[sq];
-		vertical=RanksBrd[sq];
-		while(++vertical<=RANK_8)
-		{
-	
-			int sq64=8*vertical+horizontal;
-			score += CheckKingSquare(pos,SQ120(sq64),blackKing, WHITE);
-			if(!search)
-				continue;
-			if(pos->pieces[SQ120(sq64)] != wP && pos->pieces[SQ120(sq64)] !=bP )
-				influence ++;
-			else
-				search=FALSE;
+		score += RookTable[SQ64(sq)];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score += RookOpenFile;
+		} else if(!(pos->pawns[WHITE] & FileBBMask[FilesBrd[sq]])) {
+			score += RookSemiOpenFile;
 		}
-		vertical=RanksBrd[sq];
-		search=TRUE;
-		while(--vertical>=RANK_1)
-		{
-			int sq64=8*vertical+horizontal;
-			score += CheckKingSquare(pos,SQ120(sq64),blackKing, WHITE);
-			if(pos->pieces[SQ120(sq64)] != wP && pos->pieces[SQ120(sq64)] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		vertical=RanksBrd[sq];
-		score += influence * RookScore;
-		if(vertical==RANK_7)
-			score += 5;
+	}	
 
-	}
-	return score;
 }
+
 int EvalBlackRook(const S_BOARD *pos)
 {
-	int horizontal;
-	int vertical;
-	int influence;
-	int sq;
-	int score=0;
-	int pceNum;
-	int search=TRUE;
-	int whiteKing=pos->pList[wK][0];
+	int pceNum, sq, score=0;
 	for(pceNum = 0; pceNum < pos->pceNum[bR]; ++pceNum) {
-		influence=0;
 		sq = pos->pList[bR][pceNum];
-		horizontal=FilesBrd[sq];
-		vertical=RanksBrd[sq];
-		while(++vertical<=RANK_8)
-		{
-			int sq64=8*vertical+horizontal;
-			score -= CheckKingSquare(pos,SQ120(sq64),whiteKing, BLACK);
-			if(!search)
-				continue;
-			if(pos->pieces[SQ120(sq64)] != wP && pos->pieces[SQ120(sq64)] !=bP )
-				influence ++;
-			else
-				search=FALSE;
+		score += RookTable[MIRROR64(SQ64(sq))];
+		if(!(pos->pawns[BOTH] & FileBBMask[FilesBrd[sq]])) {
+			score += RookOpenFile;
+		} else if(!(pos->pawns[BLACK] & FileBBMask[FilesBrd[sq]])) {
+			score += RookSemiOpenFile;
 		}
-		vertical=RanksBrd[sq];
-		search=TRUE;
-		while(--vertical>=RANK_1)
-		{	
-			int sq64=8*vertical+horizontal;
-			score -= CheckKingSquare(pos,SQ120(sq64),whiteKing,BLACK);
-			if(!search)
-				continue;
-			if(pos->pieces[SQ120(sq64)] != wP && pos->pieces[SQ120(sq64)] !=bP )
-				influence ++;
-			else
-				search=FALSE;
-		}
-		vertical=RanksBrd[sq];
-		score -= influence * RookScore;
-		if(vertical==RANK_2)
-			score -= 5;
-
-	}
-	return score;
+	}	
+	return -score;
 }

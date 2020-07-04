@@ -83,8 +83,6 @@ typedef struct {
 	
 	int pceNum[13];
 	int bigPce[2];
-	int majPce[2];
-	int minPce[2];
 	int material[2];
 	
 	S_UNDO history[MAXGAMEMOVES];
@@ -229,6 +227,7 @@ int EvalBlackKing(const S_BOARD *pos);
 int EvalBlackKingPawns(const S_BOARD *pos);
 int EvalBlackKnight(const S_BOARD *pos);
 int EvalBlackPawns(const S_BOARD *pos);
+int EvalBlackQueen(const S_BOARD *pos);
 int EvalBlackRook(const S_BOARD *pos);
 static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);
@@ -236,6 +235,7 @@ int EvalWhiteKing(const S_BOARD *pos);
 int EvalWhiteKingPawns(const S_BOARD *pos);
 int EvalWhiteKnight(const S_BOARD *pos);
 int EvalWhitePawns(const S_BOARD *pos);
+int EvalWhiteQueen(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
 static int FileRankValid(const int fr);
 int FindBit(U64 b);
