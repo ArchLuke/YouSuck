@@ -25,9 +25,7 @@ int EvalWhiteKing(const S_BOARD *pos)
 {
 	int score=0;
 	int sq=pos->KingSq[WHITE];
-	printf("material is %d \n", pos->material[BLACK]);
 	if( (pos->material[BLACK] <= ENDGAME_MAT) ) {
-		printf("endgame");
 		score += KingE[SQ64(sq)];
 	} else {
 		score += KingO[SQ64(sq)];
