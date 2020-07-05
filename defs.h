@@ -1,7 +1,6 @@
 #ifndef DEF_H
 #define DEF_H
 
-#include "config.h"
 #include "stdlib.h"
 
 
@@ -12,6 +11,11 @@ typedef unsigned long long U64;
 #define INFINITE 30000
 #define INPUTBUFFER 2560
 #define MATE 29000
+#define MAXDEPTH 64
+#define MAXGAMEMOVES 2048
+#define MAXPOSITIONMOVES 256
+
+#define NAME "YouSuck 1.0"
 #define NOMOVE 0
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -78,6 +82,7 @@ typedef struct {
 	int hisPly;
 	
 	int castlePerm;
+	int isCastled[2];
 	
 	U64 posKey;
 	

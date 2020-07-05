@@ -424,6 +424,14 @@ static int EvalPosition(const S_BOARD *pos) {
 	int pceNum;
 	int sq;
 	int score = pos->material[WHITE] - pos->material[BLACK];
+	if (!pos->isCastled[WHITE])
+	{
+		score -= 20;
+	}
+	if (!pos->isCastled[BLACK])
+	{
+		score += 20;
+	}
 	
 	score += EvalWhitePawns(pos);
 	score += EvalBlackPawns(pos);
@@ -1027,15 +1035,19 @@ int MakeMove(S_BOARD *pos, int move) {
     } else if (move & MFLAGCA) {
         switch(to) {
             case C1:
+		pos->isCastled[WHITE]=TRUE;
                 MovePiece(A1, D1, pos);
 			break;
             case C8:
+		pos->isCastled[BLACK]=TRUE;
                 MovePiece(A8, D8, pos);
 			break;
             case G1:
+		pos->isCastled[WHITE]=TRUE;
                 MovePiece(H1, F1, pos);
 			break;
             case G8:
+		pos->isCastled[BLACK]=TRUE;
                 MovePiece(H8, F8, pos);
 			break;
             default: break;
