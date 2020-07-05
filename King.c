@@ -11,7 +11,7 @@ const int KingE[64] = {
 };
 
 const int KingO[64] = {	
-	0	,	5	,	5	,	-10	,	-10	,	5	,	10	,	5	,
+	0	,	5	,	5	,	-20	,	-20	,	-20	,	10	,	5	,
 	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
 	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,
 	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
@@ -25,15 +25,15 @@ int EvalWhiteKing(const S_BOARD *pos)
 {
 	int score=0;
 	int sq=pos->KingSq[WHITE];
-	int sq64=SQ64(sq);
-	int file=FileBrd[sq64];
+	printf("material is %d \n", pos->material[BLACK]);
 	if( (pos->material[BLACK] <= ENDGAME_MAT) ) {
+		printf("endgame");
 		score += KingE[SQ64(sq)];
 	} else {
 		score += KingO[SQ64(sq)];
 			
 	}
-	
+	return score;	
 
 }
 
@@ -41,12 +41,11 @@ int EvalBlackKing(const S_BOARD * pos)
 {
 	int score=0;
 	int sq=pos->KingSq[BLACK];
-	int sq64=SQ64(sq);
-	int file=FileBrd[sq64];
 
 	if( (pos->material[WHITE] <= ENDGAME_MAT) ) {
-		score -= KingE[MIRROR64(SQ64(sq))];
+		score += KingE[MIRROR64(SQ64(sq))];
 	} else {
-		score -= KingO[MIRROR64(SQ64(sq))];
+		score += KingO[MIRROR64(SQ64(sq))];
 	}
+	return -score;
 }

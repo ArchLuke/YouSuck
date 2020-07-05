@@ -146,7 +146,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
-#define ENDGAME_MAT (1 * PieceVal[wR] + 2 * PieceVal[wN] + 2 * PieceVal[wP] + PieceVal[wK])
+#define ENDGAME_MAT (1 * PieceVal[wR] + 2 * PieceVal[wN] + 2 * PieceVal[wP])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define HASH_CA (pos->posKey ^= (CastleKeys[(pos->castlePerm)]))
 #define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
