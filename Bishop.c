@@ -2,7 +2,7 @@
 const int bishopMobility=3;
 const int BishopPair=10;
 const int BishopTable[64] = {
-5	,	5	,	0	,	0	,	0	,	0	,	5	,	5	,
+5	,	5	,	-5	,	0	,	0	,	-5	,	5	,	5	,
 5	,	5	,	5	,	0	,	0	,	5	,	5	,	5	,
 0	,	5	,	5	,	5	,	5	,	5	,	5	,	0	,
 0	,	0	,	5	,	5	,	5	,	5	,	0	,	0	,
