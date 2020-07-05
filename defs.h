@@ -146,7 +146,7 @@ typedef struct {
 
 #define CLRBIT(bb,sq) ((bb) &= ClearMask[(sq)])
 #define CNT(b) CountBits(b)
-#define ENDGAME (1 * PieceVal[wR] + 2 * PieceVal[wN] + 8 * PieceVal[wP])
+#define ENDGAME_MAT (1 * PieceVal[wR] + 2 * PieceVal[wN] + 2 * PieceVal[wP] + PieceVal[wK])
 #define FR2SQ(f,r) ( (21 + (f) ) + ( (r) * 10 ) ) 
 #define HASH_CA (pos->posKey ^= (CastleKeys[(pos->castlePerm)]))
 #define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
@@ -214,7 +214,6 @@ static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOV
 static void AddPiece(const int sq, S_BOARD *pos, const int pce);
 static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
 static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull); 
-int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side);
 static void CheckUp(S_SEARCHINFO *info);
 static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 static void ClearPiece(const int sq, S_BOARD *pos);
@@ -223,7 +222,6 @@ static void Console_Loop();
 int CountBits(U64 b);
 int EvalBlackBishop(const S_BOARD *pos);
 int EvalBlackKing(const S_BOARD *pos);
-int EvalBlackKingPawns(const S_BOARD *pos);
 int EvalBlackKnight(const S_BOARD *pos);
 int EvalBlackPawns(const S_BOARD *pos);
 int EvalBlackQueen(const S_BOARD *pos);
@@ -231,7 +229,6 @@ int EvalBlackRook(const S_BOARD *pos);
 static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);
 int EvalWhiteKing(const S_BOARD *pos);
-int EvalWhiteKingPawns(const S_BOARD *pos);
 int EvalWhiteKnight(const S_BOARD *pos);
 int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteQueen(const S_BOARD *pos);

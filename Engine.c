@@ -310,18 +310,6 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	
 	return alpha;
 }
-int CheckKingSquare(const S_BOARD *pos, int sq, int King, int side)
-{
-	if(pos->material[!side]>=ENDGAME)
-	{
-		if(sq==King || sq==(King+1) ||sq==(King-1)|| 
-			sq==(King-11)|| sq==(King+11) ||
-			sq==(King -9)|| sq==(King +9) ||
-			sq==(King +10) || sq==(King - 10))
-				return TargetKing;
-	}
-	return 0;
-}
 static void CheckUp(S_SEARCHINFO *info) {
 	// .. check if time up, or interrupt from GUI
 	if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
@@ -430,29 +418,6 @@ int CountBits(U64 b) {
   for(r = 0; b; r++, b &= b - 1);
   return r;
 }
-
-
-const int KingE[64] = {	
-	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	,
-	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
-	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
-	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
-	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
-	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
-	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
-	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	
-};
-
-const int KingO[64] = {	
-	0	,	5	,	5	,	-10	,	-10	,	0	,	10	,	5	,
-	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
-	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,
-	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
-	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
-	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
-	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
-	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70		
-};
 static int EvalPosition(const S_BOARD *pos) {
 
 	int pce;
@@ -474,6 +439,9 @@ static int EvalPosition(const S_BOARD *pos) {
 
 	score += EvalWhiteQueen(pos);
 	score += EvalBlackQueen(pos);
+
+	score += EvalWhiteKing(pos);
+	score += EvalBlackKing(pos);
 
 	if(pos->side == WHITE) {
 		return score;
@@ -1557,6 +1525,13 @@ void PrintPositionalEvals(S_BOARD *pos)
 
 	score=EvalBlackQueen(pos);
 	printf("Black queen score is %d \n", score);
+
+	score=EvalWhiteKing(pos);
+	printf("white king score is %d \n", score);
+
+	score=EvalBlackKing(pos);
+	printf("Black king score is %d \n", score);
+
 
 
 

@@ -1,129 +1,52 @@
 #include "defs.h"
-const int KingEndGame[64] = {	
-	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	,
-	-20,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
-	0	,	20	,	20	,	30	,	30	,	20	,	20	,	0	,
-	0	,	20	,	30	,	30	,	30	,	30	,	20	,	0	,
-	0	,	20	,	30	,	30	,	30	,	30	,	20	,	0	,
-	0	,	20	,	20	,	30	,	30	,	20	,	20	,	0	,
-	-20	,	0	,	20	,	20	,	20	,	20	,	0	,	-20	,
-	-50	,	-20	,	0	,	0	,	0	,	0	,	-20	,	-50	
+const int KingE[64] = {	
+	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	,
+	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
+	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
+	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
+	0	,	10	,	20	,	40	,	40	,	20	,	10	,	0	,
+	0	,	10	,	20	,	20	,	20	,	20	,	10	,	0	,
+	-10,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
+	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	
 };
 
-const int KingMiddleGame[64] = {	
-	15	,	25	,	20	,	-10	,	-10	,	0	,	20	,	10	,
-	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,	-10	,
+const int KingO[64] = {	
+	0	,	5	,	5	,	-10	,	-10	,	5	,	10	,	5	,
 	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,	-30	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70	,
-	-70	,	-70	,	-100	,	-100	,	-100	,	-100	,	-70	,	-70		
+	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,	-50	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,
+	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70	,	-70		
 };
-const int Mirror64[64] = {
-56	,	57	,	58	,	59	,	60	,	61	,	62	,	63	,
-48	,	49	,	50	,	51	,	52	,	53	,	54	,	55	,
-40	,	41	,	42	,	43	,	44	,	45	,	46	,	47	,
-32	,	33	,	34	,	35	,	36	,	37	,	38	,	39	,
-24	,	25	,	26	,	27	,	28	,	29	,	30	,	31	,
-16	,	17	,	18	,	19	,	20	,	21	,	22	,	23	,
-8	,	9	,	10	,	11	,	12	,	13	,	14	,	15	,
-0	,	1	,	2	,	3	,	4	,	5	,	6	,	7
-};
-const int KingsPawns=-10;
-const int OpenFile=-20;
+
 int EvalWhiteKing(const S_BOARD *pos)
 {
-	int sq = pos->pList[wK][0];
 	int score=0;
-	if(pos->material[BLACK] <= ENDGAME) {
-		score += KingEndGame[SQ64(sq)];
+	int sq=pos->KingSq[WHITE];
+	int sq64=SQ64(sq);
+	int file=FileBrd[sq64];
+	if( (pos->material[BLACK] <= ENDGAME_MAT) ) {
+		score += KingE[SQ64(sq)];
 	} else {
-		score += KingMiddleGame[SQ64(sq)];
-	}
-	return score;
-}
-int EvalWhiteKingPawns(const S_BOARD *pos)
-{
-	int score=0;
-
-	int square = pos->pList[wK][0];
-	if(pos->material[BLACK] >= ENDGAME)
-	{
-		int sq64=SQ64(square);
-		int file=FilesBrd[square];
-		if(!(pos->pawns[WHITE] & (1ULL<<sq64+8))){
-			score += KingsPawns;
-		}
-		if(!(FileBBMask[file] & pos->pawns[WHITE]))
-			score += OpenFile;
-
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+9))){
-				score += KingsPawns;
-			}
-		}
-		if(file+1<=FILE_H)
-			if(!(FileBBMask[file+1] & pos->pawns[WHITE]))
-				score += OpenFile;
-
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[WHITE] & (1ULL<<sq64+7))){
-				score += KingsPawns;
-			}
-		}
-		if(file-1>=FILE_A)
-			if(!(FileBBMask[file-1] & pos->pawns[WHITE]))
-				score += OpenFile;
-
-	}
-	return score;
-}
-int EvalBlackKing(const S_BOARD *pos)
-{
-	int score=0;
-	int square = pos->pList[bK][0];
-	if((pos->material[WHITE] <= ENDGAME) ) {
-		score -= KingEndGame[MIRROR64(SQ64(square))];
-	} else {
-		score -= KingMiddleGame[MIRROR64(SQ64(square))];
-	}
-	return score;
-}
-int EvalBlackKingPawns(const S_BOARD *pos)
-{
-	int score=0;
-	int square = pos->pList[bK][0];
-	if(pos->material[WHITE] >=ENDGAME)
-	{
-		int sq64=SQ64(square);
-		int file=FilesBrd[square];
-		if(!(pos->pawns[BLACK] & (1ULL<<sq64-8)))
-			score -= KingsPawns;
-		if(!(FileBBMask[file] & pos->pawns[BLACK]))
-			score -= OpenFile;
-		if(FilesBrd[square] != FILE_H)
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-7)))
-				score -= KingsPawns;
-		}
-		if(file+1<=FILE_H)
-			if(!(FileBBMask[file+1] & pos->pawns[BLACK]))
-				score -= OpenFile;
-		
-		if((FilesBrd[square] != FILE_A))
-		{
-			if(!(pos->pawns[BLACK] & (1ULL<<sq64-9)))
-				score -= KingsPawns;
-		}
-		if(file-1>=FILE_A)
-			if(!(FileBBMask[file-1] & pos->pawns[BLACK]))
-				score -= OpenFile;
-
-		
+		score += KingO[SQ64(sq)];
+			
 	}
 	
-	return score;
+
+}
+
+int EvalBlackKing(const S_BOARD * pos)
+{
+	int score=0;
+	int sq=pos->KingSq[BLACK];
+	int sq64=SQ64(sq);
+	int file=FileBrd[sq64];
+
+	if( (pos->material[WHITE] <= ENDGAME_MAT) ) {
+		score -= KingE[MIRROR64(SQ64(sq))];
+	} else {
+		score -= KingO[MIRROR64(SQ64(sq))];
+	}
 }
