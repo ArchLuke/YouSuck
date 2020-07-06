@@ -8,7 +8,9 @@
 
 //global initializations
 int BlackMaxDiagonalDistance[64][2];
+int ColorSquare[64];
 int DiagonalDistance[64][64];
+int KingManhattanDistances[64][64];
 int KnightMobility[64];
 int WhiteMaxDiagonalDistance[64][2];
 
@@ -46,7 +48,7 @@ const int Mirror64[64] = {
 };
 const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
 	BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
-const int PieceVal[13]= { 0, 100, 325, 330, 550, 1000, 50000, 100, 325, 350, 550, 1000, 50000  };
+const int PieceVal[13]= { 0, 100, 325, 330, 550, 1000, 50000, 100, 325, 330, 550, 1000, 50000  };
 int RanksBrd[BRD_SQ_NUM];
 
 
@@ -424,31 +426,38 @@ static int EvalPosition(const S_BOARD *pos) {
 	int pceNum;
 	int sq;
 	int score = pos->material[WHITE] - pos->material[BLACK];
-	if (!pos->isCastled[WHITE])
+	if(pos->material[BLACK]>0)
 	{
-		score -= 20;
+		
+		if (!pos->isCastled[WHITE])
+		{
+			score -= 20;
+		}
+
+		score += EvalWhitePawns(pos);
+		score += EvalWhiteKnight(pos);
+		score += EvalWhiteBishop(pos);
+		score += EvalWhiteRook(pos);
+		score += EvalWhiteQueen(pos);
+
 	}
-	if (!pos->isCastled[BLACK])
-	{
-		score += 20;
-	}
-	
-	score += EvalWhitePawns(pos);
-	score += EvalBlackPawns(pos);
-	
-	score += EvalWhiteKnight(pos);
-	score += EvalBlackKnight(pos);
-
-	score += EvalBlackBishop(pos);
-	score += EvalWhiteBishop(pos);
-
-	score += EvalWhiteRook(pos);
-	score += EvalBlackRook(pos);
-
-	score += EvalWhiteQueen(pos);
-	score += EvalBlackQueen(pos);
-
 	score += EvalWhiteKing(pos);
+	if(pos->material[WHITE]>0)
+	{
+		if (!pos->isCastled[BLACK])
+		{
+			score += 20;
+		}
+		
+
+		score += EvalBlackPawns(pos);
+		score += EvalBlackKnight(pos);
+		score += EvalBlackBishop(pos);
+		score += EvalBlackRook(pos);
+		score += EvalBlackQueen(pos);
+
+	}
+	
 	score += EvalBlackKing(pos);
 
 	if(pos->side == WHITE) {
@@ -785,6 +794,36 @@ void InitEvalMasks() {
 			tsq -= 8;
 		    }
 		}
+	}
+//color square
+	int color=BLACK;
+	for(sq=0;sq<64;sq++)
+	{
+		//color doesnt change with a new rank
+		if(sq % 8 !=0)
+		{
+		//BLACK ^ 1=WHITE WHITE ^ 1=BLACK
+			color^=1;
+		}
+		ColorSquare[sq]=color;
+	}
+
+//king manhattan distances
+	for(sq=0;sq<64;sq++)
+	{
+		for(tsq=0;tsq<64;tsq++)
+		{
+			int sqFile=FilesBrd[SQ120(sq)];
+			int sqRank=RanksBrd[SQ120(sq)];
+			int tsqFile=FilesBrd[SQ120(tsq)];
+			int tsqRank=RanksBrd[SQ120(tsq)];
+			int fileDistance=abs(sqFile-tsqFile);
+			int rankDistance=abs(sqRank-tsqRank);
+			KingManhattanDistances[sq][tsq]=fileDistance+rankDistance;
+		//	printf("sq is %d tsq is %d distance is %d \n", sq,tsq,fileDistance+rankDistance);
+		}
+		
+	
 	}
 //doubled pawns masks
 	for(sq=0;sq<64;sq++)

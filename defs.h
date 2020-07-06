@@ -177,9 +177,12 @@ U64 ClearMask[64];
 U64 SetMask[64];
 int Sq64ToSq120[64];
 int Sq120ToSq64[BRD_SQ_NUM];
+
 /*globals across files*/
+extern int ColorSquare[64];
 extern int BlackMaxDiagonalDistance[64][2];
 extern int DiagonalDistance[64][64];
+extern int KingManhattanDistances[64][64];
 extern int KnightMobility[64];
 extern int WhiteMaxDiagonalDistance[64][2];
 

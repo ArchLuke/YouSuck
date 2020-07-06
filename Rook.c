@@ -25,7 +25,7 @@ int EvalWhiteRook(const S_BOARD *pos)
 			score += RookSemiOpenFile;
 		}
 	}	
-
+	return score;
 }
 
 int EvalBlackRook(const S_BOARD *pos)

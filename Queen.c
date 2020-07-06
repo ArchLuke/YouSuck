@@ -10,6 +10,7 @@ int EvalWhiteQueen(const S_BOARD *pos)
 			score += QueenOpenFile;
 		} 
 	}	
+	return score;
 
 }
 int EvalBlackQueen(const S_BOARD *pos)
