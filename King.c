@@ -13,7 +13,7 @@ const int KingE[64] = {
 	-10	,	0	,	10	,	10	,	10	,	10	,	0	,	-10	,
 	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	
 };
-
+/*
 const int KingEd[64] = {	
 	-50	,	-10	,	-5	,	5	,	40	,	20	,	10	,	10	,
 	-30	,	-10	,	0	,	15	,	40	,	15	,	10	,	10	,
@@ -35,7 +35,7 @@ const int KingEl[64] = {
 	-30	,	-10	,	0	,	15	,	40	,	15	,	10	,	10	,
 	-50	,	-10	,	-5	,	5	,	40	,	20	,	10	,	10	
 };
-
+*/
 
 const int KingO[64] = {	
 	0	,	10	,	5	,	-20	,	-20	,	-10	,	10	,	5	,
@@ -58,8 +58,10 @@ int EvalWhiteKing(const S_BOARD *pos)
 	} else{
 		if(material > 0)
 		{
-			int whiteMaterial=pos->material[WHITE];
-			//bishop and knight mate deserves special attention
+
+			//int whiteMaterial=pos->material[WHITE];
+			//bishop and knight mate deserves special attention*
+			/*
 			if(material==655 && whiteMaterial==0)
 			{
 				int square=pos->pList[bB][0];
@@ -70,13 +72,12 @@ int EvalWhiteKing(const S_BOARD *pos)
 				}
 				else
 				{
-					score += 5*KingEl[SQ64(sq)];
-				}
-			}
-			else
-			{
-				score += KingE[SQ64(sq)];
-			}
+			score += 5*KingEl[SQ64(sq)];
+			//	}
+		}else
+		{*/
+			score += KingE[SQ64(sq)];
+		//}
 		}
 		//piece checkmates require a slightly different king evaluation
 		else
@@ -101,8 +102,10 @@ int EvalBlackKing(const S_BOARD * pos)
 	} else{
 		if(material > 0)
 		{
-			int blackMaterial=pos->material[BLACK];
+		
+		//	int blackMaterial=pos->material[BLACK];
 			//bishop and knight mate deserves special attention
+			/*
 			if(material==655 && blackMaterial==0)
 			{
 				int square=pos->pList[wB][0];
@@ -113,9 +116,9 @@ int EvalBlackKing(const S_BOARD * pos)
 					score += 5*KingEd[SQ64(sq)];
 			}
 			else
-			{
-				score += KingE[SQ64(sq)];
-			}
+			{*/
+			score += KingE[SQ64(sq)];
+			//}
 		}
 		//piece checkmates require a slightly different king evaluation
 		else

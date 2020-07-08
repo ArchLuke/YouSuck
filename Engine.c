@@ -426,6 +426,10 @@ static int EvalPosition(const S_BOARD *pos) {
 	int pceNum;
 	int sq;
 	int score = pos->material[WHITE] - pos->material[BLACK];
+	if(!pos->pceNum[wP] && !pos->pceNum[bP]) {
+		if(MaterialDraw(pos))
+			return 0;
+	}
 	if(pos->material[BLACK]>0)
 	{
 		
@@ -1173,6 +1177,18 @@ void MakeNullMove(S_BOARD *pos) {
     HASH_SIDE;
    
     return;
+}
+int MaterialDraw(const S_BOARD *pos) {
+        if (!pos->pceNum[wR] && !pos->pceNum[bR] && !pos->pceNum[wQ] && !pos->pceNum[bQ]) {
+	  if (!pos->pceNum[bB] && !pos->pceNum[wB]) {
+	      if (pos->pceNum[wN] < 3 && pos->pceNum[bN] < 3) {  return TRUE; }
+	  } else if (!pos->pceNum[wN] && !pos->pceNum[bN]) {
+	     if (abs(pos->pceNum[wB] - pos->pceNum[bB]) < 2) { return TRUE; }
+	  } else if ((pos->pceNum[wN] < 3 && !pos->pceNum[wB]) || (pos->pceNum[wB] == 1 && !pos->pceNum[wN])) {
+	    if ((pos->pceNum[bN] < 3 && !pos->pceNum[bB]) || (pos->pceNum[bB] == 1 && !pos->pceNum[bN]))  { return TRUE; }
+	  }
+	}
+	return FALSE;
 }
 static
 int MoveExists(S_BOARD *pos, const int move) {
