@@ -63,7 +63,7 @@ S_BOARD pos[1];
 S_SEARCHINFO info[1];
 
 const int Castle=5;
-const int PvSize = 0x100000 * 2;
+const int HashSize = 0x100000 * 16;
 
 const int BitTable[64] = {
   63, 30, 3, 32, 25, 41, 22, 33, 15, 50, 42, 13, 11, 53, 19, 34, 61, 29, 2,
@@ -205,9 +205,9 @@ static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 }
 static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
 
-	
 	if(depth == 0) {
 		return Quiescence(alpha, beta, pos, info);
+		// return EvalPosition(pos);
 	}
 	
 	if(( info->nodes & 2047 ) == 0) {
@@ -216,19 +216,27 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 		
 	info->nodes++;
 	
-	if((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply) {
+	if((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply) {	
 		return 0;
 	}
 	
 	if(pos->ply > MAXDEPTH - 1) {
 		return EvalPosition(pos);
 	}
+	
 	int InCheck = SqAttacked(pos->KingSq[pos->side],pos->side^1,pos);
 	
 	if(InCheck == TRUE) {
 		depth++;
 	}
+	
 	int Score = -INFINITE;
+	int PvMove = NOMOVE;
+	
+	if( ProbeHashEntry(pos, &PvMove, &Score, alpha, beta, depth) == TRUE ) {
+		pos->HashTable->cut++;
+		return Score;
+	}
 	
 	if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
 		MakeNullMove(pos);
@@ -236,22 +244,26 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 		TakeNullMove(pos);
 		if(info->stopped == TRUE) {
 			return 0;
-		}
-		if (Score >= beta) {		 
+		}		
+		
+		if (Score >= beta && abs(Score) < ISMATE) {		 
 		  return beta;
 		}	
-	}	
+	}
+	
 	S_MOVELIST list[1];
-   	GenerateAllMoves(pos,list,0);
-      
+    	GenerateAllMoves(pos,list, FALSE);    
+	
     	int MoveNum = 0;
 	int Legal = 0;
 	int OldAlpha = alpha;
 	int BestMove = NOMOVE;
-	Score = -INFINITE;
-	int PvMove = ProbePvTable(pos);
 	
-	if( PvMove != NOMOVE ) {
+	int BestScore = -INFINITE;
+	
+	Score = -INFINITE;
+	
+	if( PvMove != NOMOVE) {
 		for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {
 			if( list->moves[MoveNum].move == PvMove) {
 				list->moves[MoveNum].score = 2000000;
@@ -269,48 +281,56 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
         }
         
 		Legal++;
-		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE);		
-        TakeMove(pos);
+		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE);
+		TakeMove(pos);
 		
 		if(info->stopped == TRUE) {
 			return 0;
 		}		
-		
-		if(Score > alpha) {
-			if(Score >= beta) {
-				if(Legal==1) {
-					info->fhf++;
+		if(Score > BestScore) {
+			BestScore = Score;
+			BestMove = list->moves[MoveNum].move;
+			if(Score > alpha) {
+				if(Score >= beta) {
+					if(Legal==1) {
+						info->fhf++;
+					}
+					info->fh++;	
+					
+					if(!(list->moves[MoveNum].move & MFLAGCAP)) {
+						pos->searchKillers[1][pos->ply] = pos->searchKillers[0][pos->ply];
+						pos->searchKillers[0][pos->ply] = list->moves[MoveNum].move;
+					}
+					
+					StoreHashEntry(pos, BestMove, beta, HFBETA, depth);
+					
+					return beta;
 				}
-				info->fh++;	
+				alpha = Score;
 				
 				if(!(list->moves[MoveNum].move & MFLAGCAP)) {
-					pos->searchKillers[1][pos->ply] = pos->searchKillers[0][pos->ply];
-					pos->searchKillers[0][pos->ply] = list->moves[MoveNum].move;
+					pos->searchHistory[pos->pieces[FROMSQ(BestMove)]][TOSQ(BestMove)] += depth;
 				}
-				
-				return beta;
-			}
-			alpha = Score;
-			BestMove = list->moves[MoveNum].move;
-			if(!(list->moves[MoveNum].move & MFLAGCAP)) {
-				pos->searchHistory[pos->pieces[FROMSQ(BestMove)]][TOSQ(BestMove)] += depth;
 			}
 		}		
     }
 	
 	if(Legal == 0) {
-		if(SqAttacked(pos->KingSq[pos->side],pos->side^1,pos)) {
-			return -MATE + pos->ply;
+		if(InCheck) {
+			return -INFINITE + pos->ply;
 		} else {
 			return 0;
 		}
 	}
 	
 	if(alpha != OldAlpha) {
-		StorePvMove(pos, BestMove);
+		StoreHashEntry(pos, BestMove, BestScore, HFEXACT, depth);
+	} else {
+		StoreHashEntry(pos, BestMove, alpha, HFALPHA, depth);
 	}
 	
 	return alpha;
+	
 }
 static void CheckUp(S_SEARCHINFO *info) {
 	// .. check if time up, or interrupt from GUI
@@ -336,8 +356,10 @@ static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 			pos->searchKillers[index][index2] = 0;
 		}
 	}	
-	
-	ClearPvTable(pos->PvTable);	
+
+	pos->HashTable->overWrite=0;
+	pos->HashTable->hit=0;
+	pos->HashTable->cut=0;	
 	pos->ply = 0;
 	
 	info->stopped = 0;
@@ -381,15 +403,19 @@ static void ClearPiece(const int sq, S_BOARD *pos) {
 	pos->pList[pce][t_pceNum] = pos->pList[pce][pos->pceNum[pce]];
   
 }
-static void ClearPvTable(S_PVTABLE *table) {
-
-  S_PVENTRY *pvEntry;
-
-  for (pvEntry = table->pTable; pvEntry < table->pTable + table->numEntries; pvEntry++) {
-    pvEntry->posKey = 0ULL;
-    pvEntry->move = NOMOVE;
-  }
-}
+static void ClearHashTable(S_HASHTABLE *table) {
+	S_HASHENTRY *tableEntry;
+  
+	for (tableEntry = table->pTable; tableEntry < table->pTable + table->numEntries; tableEntry++) 
+	{
+		tableEntry->posKey = 0ULL;
+		tableEntry->move = NOMOVE;
+		tableEntry->depth = 0;
+		tableEntry->score = 0;
+		tableEntry->flags = 0;
+ 	}
+ 	table->newWrite=0;
+ }
 static void Console_Loop()
 {
 	printf("mode is console\n");
@@ -1002,17 +1028,16 @@ int InitMvvLva() {
 	}		
 }
 static
-void InitPvTable(S_PVTABLE *table) {  
+void InitHashTable(S_HASHTABLE *table) {  
   
-    table->numEntries = PvSize / sizeof(S_PVENTRY);
+    table->numEntries = HashSize / sizeof(S_HASHENTRY);
     table->numEntries -= 2;
     if(table->pTable != NULL) free(table->pTable);
-    table->pTable = (S_PVENTRY *) malloc(table->numEntries * sizeof(S_PVENTRY));
-    ClearPvTable(table);
+    table->pTable = (S_HASHENTRY *) malloc(table->numEntries * sizeof(S_HASHENTRY));
+    ClearHashTable(table);
 	
 }
-static
-void InitSq120To64() {
+static void InitSq120To64() {
 
 	int index = 0;
 	int file = FILE_A;
@@ -1631,21 +1656,58 @@ char *PrMove(const int move) {
 	return MvStr;
 }
 static
+int ProbeHashEntry(S_BOARD *pos, int *move, int *score, int alpha, int beta, int depth) {
+
+	int index = pos->posKey % pos->HashTable->numEntries;
+	
+	
+	if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+		*move = pos->HashTable->pTable[index].move;
+		if(pos->HashTable->pTable[index].depth >= depth){
+			pos->HashTable->hit++;
+			
+			*score = pos->HashTable->pTable[index].score;
+			if(*score > ISMATE) *score -= pos->ply;
+            else if(*score < -ISMATE) *score += pos->ply;
+			
+			switch(pos->HashTable->pTable[index].flags) {
+				
+
+                case HFALPHA: if(*score<=alpha) {
+                    *score=alpha;
+                    return TRUE;
+                    }
+                    break;
+                case HFBETA: if(*score>=beta) {
+                    *score=beta;
+                    return TRUE;
+                    }
+                    break;
+                case HFEXACT:
+                    return TRUE;
+                    break;
+                default: break;
+            }
+		}
+	}
+	
+	return FALSE;
+}
+
+static
 int ProbePvTable(const S_BOARD *pos) {
 
-	int index = pos->posKey % pos->PvTable->numEntries;
+	int index = pos->posKey % pos->HashTable->numEntries;
 	
-	if( pos->PvTable->pTable[index].posKey == pos->posKey ) {
-		return pos->PvTable->pTable[index].move;
+	if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+		return pos->HashTable->pTable[index].move;
 	}
 	
 	return NOMOVE;
 }
 static
 int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
-
-	
-	if(( info->nodes & 2047 ) == 0) {
+if(( info->nodes & 2047 ) == 0) {
 		CheckUp(info);
 	}
 	
@@ -1670,23 +1732,13 @@ int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 	}
 	
 	S_MOVELIST list[1];
-    GenerateAllMoves(pos,list,1);
+        GenerateAllMoves(pos,list,TRUE);
       
-    int MoveNum = 0;
+        int MoveNum = 0;
 	int Legal = 0;
 	int OldAlpha = alpha;
 	int BestMove = NOMOVE;
 	Score = -INFINITE;
-	int PvMove = ProbePvTable(pos);
-	
-	if( PvMove != NOMOVE ) {
-		for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {
-			if( list->moves[MoveNum].move == PvMove) {
-				list->moves[MoveNum].score = 2000000;
-				break;
-			}
-		}
-	}
 	
 	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
 			
@@ -1716,10 +1768,6 @@ int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 			BestMove = list->moves[MoveNum].move;
 		}		
     }
-	
-	if(alpha != OldAlpha) {
-		StorePvMove(pos, BestMove);
-	}
 	
 	return alpha;
 }
@@ -1816,6 +1864,7 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 			printf(" %s",PrMove(pos->PvArray[pvNum]));
 		}
 		printf("\n");
+		printf("Hits: %d Overwrite:%d NewWrite:%d Cut:%d\n",pos->HashTable->hit, pos->HashTable->overWrite,pos->HashTable->newWrite, pos->HashTable->cut);
 		// printf("Ordering:%.2f\n",(info->fhf/info->fh));
 	}
 	//info score cp 13  depth 1 nodes 13 time 15 pv f1b5
@@ -1897,16 +1946,26 @@ int SideValid(const int side) {
 int SqOnBoard(const int sq) {
 	return FilesBrd[sq]==OFFBOARD ? 0 : 1;
 }
-static
-void StorePvMove(const S_BOARD *pos, const int move) {
-
-	int index = pos->posKey % pos->PvTable->numEntries;
+static void StoreHashEntry(S_BOARD *pos, const int move, int score, const int flags, const int depth) {
+	int index = pos->posKey % pos->HashTable->numEntries;
 	
-	pos->PvTable->pTable[index].move = move;
-    pos->PvTable->pTable[index].posKey = pos->posKey;
+	if( pos->HashTable->pTable[index].posKey == 0) {
+		pos->HashTable->newWrite++;
+	} else {
+		pos->HashTable->overWrite++;
+	}
+	
+	if(score > ISMATE) score += pos->ply;
+    	else if(score < -ISMATE) score -= pos->ply;
+	
+	pos->HashTable->pTable[index].move = move;
+    	pos->HashTable->pTable[index].posKey = pos->posKey;
+	pos->HashTable->pTable[index].flags = flags;
+	pos->HashTable->pTable[index].score = score;
+	pos->HashTable->pTable[index].depth = depth;
+
 }
-static
-void TakeMove(S_BOARD *pos) {
+static void TakeMove(S_BOARD *pos) {
 	
 	
 	pos->hisPly--;
@@ -2006,7 +2065,7 @@ void Uci_Loop() {
 		}
 		if(info->quit) break;
 	}
-	free(pos->PvTable->pTable);
+	free(pos->HashTable->pTable);
 }
 static
 void UpdateListsMaterial(S_BOARD *pos) {	
@@ -2045,7 +2104,7 @@ int main()
 	setbuf(stdin, NULL);
         setbuf(stdout, NULL);
 	line=calloc(INPUTBUFFER, sizeof(char));	
-        InitPvTable(pos->PvTable);
+        InitHashTable(pos->HashTable);
 
 //loops
 	while(1){
