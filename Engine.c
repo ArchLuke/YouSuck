@@ -436,6 +436,7 @@ static void Console_Loop()
 			PrintPositionalEvals(pos);		
 		}else if(strncmp(line, "q", 1)==0)
 		{
+			printf("inner loop broken \n");
 			info->quit=TRUE;
 			break;		
 		}
@@ -1968,7 +1969,7 @@ static void StoreHashEntry(S_BOARD *pos, const int move, int score, const int fl
 static void TakeMove(S_BOARD *pos) {
 	
 	
-	pos->hisPly--;
+    pos->hisPly--;
     pos->ply--;
 	
     int move = pos->history[pos->hisPly].move;
@@ -2107,7 +2108,8 @@ int main()
         InitHashTable(pos->HashTable);
 
 //loops
-	while(1){
+	while(1)
+	{
 		fgets(line, INPUTBUFFER, stdin);
 		if(strncmp(line, "uci", 3)==0){
 			printf("id name %s\n",NAME);
@@ -2118,9 +2120,16 @@ int main()
 
 		}
 		if(strncmp(line, "console",7)==0)
+		{
 			Console_Loop();
+			continue;
+		}
 		if(strncmp(line, "q", 1)==0)
+		{	
+			printf("outer loop broken \n");		
 			break;
+
+		}
 	}
 	return 0;
 }
