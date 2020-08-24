@@ -122,7 +122,6 @@ typedef struct {
 	
 	long nodes;
 	
-	int quit;
 	int stopped;
 
 	float fh;
@@ -287,6 +286,7 @@ static int ProbePvTable(const S_BOARD *pos);
 static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
 static void ReadInput(S_SEARCHINFO *info);
 static void ResetBoard(S_BOARD *pos); 
+static int Search(int trap);
 static void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
 int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 static int SideValid(const int side);

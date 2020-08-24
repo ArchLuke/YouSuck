@@ -436,8 +436,6 @@ static void Console_Loop()
 			PrintPositionalEvals(pos);		
 		}else if(strncmp(line, "q", 1)==0)
 		{
-			printf("inner loop broken \n");
-			info->quit=TRUE;
 			break;		
 		}
 	}
@@ -1467,7 +1465,6 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
 
     int from = FR2SQ(ptrChar[0] - 'a', ptrChar[1] - '1');
     int to = FR2SQ(ptrChar[2] - 'a', ptrChar[3] - '1');	
-    printf("from square is %d to square is %d", from, to);
 	
 	
     S_MOVELIST list[1];
@@ -1479,7 +1476,6 @@ int ParseMove(char *ptrChar, S_BOARD *pos) {
 	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
 		Move = list->moves[MoveNum].move;
 		if(FROMSQ(Move)==from && TOSQ(Move)==to) {
-			printf("matched \n");
 			PromPce = PROMOTED(Move);
 			if(PromPce!=EMPTY) {
 				if(IsRQ(PromPce) && !IsBQ(PromPce) && ptrChar[4]=='r') {
@@ -1779,17 +1775,6 @@ void ReadInput(S_SEARCHINFO *info) {
 
   	if (InputWaiting()) {    
 		info->stopped = TRUE;
-		do {
-		  bytes=read(fileno(stdin),input,256);
-		} while (bytes<0);
-		endc = strchr(input,'\n');
-		if (endc) *endc=0;
-
-		if (strlen(input) > 0) {
-			if (!strncmp(input, "quit", 4))    {
-			  info->quit = TRUE;
-			}
-		}
 		return;
     	}
 }
@@ -1833,9 +1818,8 @@ void ResetBoard(S_BOARD *pos) {
 	pos->posKey = 0ULL;
 	
 }
-static
-void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
-	
+static int Search(int trap)
+{
 	int bestMove = NOMOVE;
 	int bestScore = -INFINITE;
 	int currentDepth = 0;
@@ -1868,9 +1852,26 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 		printf("Hits: %d Overwrite:%d NewWrite:%d Cut:%d\n",pos->HashTable->hit, pos->HashTable->overWrite,pos->HashTable->newWrite, pos->HashTable->cut);
 		// printf("Ordering:%.2f\n",(info->fhf/info->fh));
 	}
-	//info score cp 13  depth 1 nodes 13 time 15 pv f1b5
-	printf("bestmove %s\n",PrMove(bestMove));	
+	return bestMove;
+}
+static
+void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
+	
+	int move=Search(FALSE);
+	printf("bestmove %s\n",PrMove(move));	
 
+	info->starttime = GetTimeMs();
+	info->depth = MAXDEPTH;
+	info->timeset=FALSE;
+
+	MakeMove(pos, move);
+	int pv=ProbePvTable(pos);
+	MakeMove(pos, pv);
+	Search(TRUE);
+
+	TakeMove(pos);	
+	TakeMove(pos);
+		
 }
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 
@@ -2061,10 +2062,8 @@ void Uci_Loop() {
 		} else if (!strncmp(line, "go", 2)) {
 		    ParseGo(line, info, pos);
 		} else if (!strncmp(line, "quit", 4)) {
-		    info->quit = TRUE;
 		    break;
 		}
-		if(info->quit) break;
 	}
 	free(pos->HashTable->pTable);
 }
@@ -2126,7 +2125,6 @@ int main()
 		}
 		if(strncmp(line, "q", 1)==0)
 		{	
-			printf("outer loop broken \n");		
 			break;
 
 		}
