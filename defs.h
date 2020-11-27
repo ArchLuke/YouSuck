@@ -230,7 +230,7 @@ static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, co
 static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 static void AddPiece(const int sq, S_BOARD *pos, const int pce);
 static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull,int topLevel); 
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull); 
 static int AlphaBetaModified(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull) ;
 static void CheckUp(S_SEARCHINFO *info);
 static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
