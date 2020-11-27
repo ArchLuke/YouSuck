@@ -1,3 +1,4 @@
+#include "config.h"
 #include "defs.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +58,7 @@ U64 CastleKeys[16];
 U64 PieceKeys[13][120];
 U64 SideKey;
 
+int bestScore=-INFINITE;
 char *line;
 const int TargetKing=5;
 S_BOARD pos[1];
@@ -203,8 +205,140 @@ static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list ) {
 	}
 	list->count++;
 }
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull, int topLevel) {
 
+	if(depth == 0) {
+		return Quiescence(alpha, beta, pos, info);
+		//return EvalPosition(pos);
+	}
+	
+	if(( info->nodes & 2047 ) == 0) {
+		CheckUp(info);
+	}
+		
+	info->nodes++;
+	
+	if((IsRepetition(pos) || pos->fiftyMove >= 100) && pos->ply) {	
+		return 0;
+	}
+	
+	if(pos->ply > MAXDEPTH - 1) {
+		return EvalPosition(pos);
+	}
+	
+	int InCheck = SqAttacked(pos->KingSq[pos->side],pos->side^1,pos);
+	
+	if(InCheck == TRUE) {
+		depth++;
+	}
+	
+	int Score = -INFINITE;
+	int PvMove = NOMOVE;
+	
+	if( ProbeHashEntry(pos, &PvMove, &Score, alpha, beta, depth) == TRUE ) {
+		pos->HashTable->cut++;
+		return Score;
+	}
+	
+	if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
+		MakeNullMove(pos);
+		Score = -AlphaBeta( -beta, -beta + 1, depth-4, pos, info, FALSE,FALSE);
+		TakeNullMove(pos);
+		if(info->stopped == TRUE) {
+			return 0;
+		}		
+		
+		if (Score >= beta && abs(Score) < ISMATE) {		 
+		  return beta;
+		}	
+	}
+	
+	S_MOVELIST list[1];
+    	GenerateAllMoves(pos,list, FALSE);    
+	
+    	int MoveNum = 0;
+	int Legal = 0;
+	int OldAlpha = alpha;
+	int BestMove = NOMOVE;
+	int secondBestMove=NOMOVE;
+
+	int BestScore = -INFINITE;
+	int secondBestScore= -INFINITE;	
+	Score = -INFINITE;
+	
+	if( PvMove != NOMOVE) {
+		for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {
+			if( list->moves[MoveNum].move == PvMove) {
+				list->moves[MoveNum].score = 2000000;
+				break;
+			}
+		}
+	}
+	for(MoveNum = 0; MoveNum < list->count; ++MoveNum) {	
+		PickNextMove(MoveNum, list);	
+	        if ( !MakeMove(pos,list->moves[MoveNum].move))  {
+           		 continue;
+        	}
+        
+		Legal++;
+		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE,FALSE);
+		if(topLevel)
+			printf("move is %s score is %d ", PrMove(list->moves[MoveNum].move), Score);
+		TakeMove(pos);
+		
+		if(info->stopped == TRUE) {
+			return 0;
+		}		
+		if(Score > BestScore) {
+			BestScore = Score;
+			BestMove = list->moves[MoveNum].move;
+			if(Score > alpha) {
+				if(Score >= beta) {
+					if(Legal==1) {
+						info->fhf++;
+					}
+					info->fh++;	
+					
+					if(!(list->moves[MoveNum].move & MFLAGCAP)) {
+						pos->searchKillers[1][pos->ply] = pos->searchKillers[0][pos->ply];
+						pos->searchKillers[0][pos->ply] = list->moves[MoveNum].move;
+					}
+					
+					StoreHashEntry(pos, BestMove, beta, HFBETA, depth);
+					
+					return beta;
+				}
+				alpha = Score;
+				
+				if(!(list->moves[MoveNum].move & MFLAGCAP)) {
+					pos->searchHistory[pos->pieces[FROMSQ(BestMove)]][TOSQ(BestMove)] += depth;
+				}
+			}
+			continue;
+		}
+		if(Score>secondBestScore){
+			secondBestScore=Score;
+			secondBestMove=list->moves[MoveNum].move;
+		}		
+    	}
+	
+	if(Legal == 0) {
+		if(InCheck) {
+			return -INFINITE + pos->ply;
+		} else {
+			return 0;
+		}
+	}
+	StorePv2Entry(pos, secondBestMove, secondBestScore);
+	if(alpha != OldAlpha) {
+		StoreHashEntry(pos, BestMove, BestScore, HFEXACT, depth);
+	} else {
+		StoreHashEntry(pos, BestMove, alpha, HFALPHA, depth);
+	}
+	return BestScore;
+	
+}
+static int AlphaBetaModified(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int DoNull) {
 	if(depth == 0) {
 		return Quiescence(alpha, beta, pos, info);
 		// return EvalPosition(pos);
@@ -240,7 +374,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	
 	if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
 		MakeNullMove(pos);
-		Score = -AlphaBeta( -beta, -beta + 1, depth-4, pos, info, FALSE);
+		Score = -AlphaBeta( -beta, -beta + 1, depth-4, pos, info, FALSE,FALSE);
 		TakeNullMove(pos);
 		if(info->stopped == TRUE) {
 			return 0;
@@ -281,7 +415,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
         }
         
 		Legal++;
-		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE);
+		Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE, FALSE);
 		TakeMove(pos);
 		
 		if(info->stopped == TRUE) {
@@ -332,6 +466,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	return alpha;
 	
 }
+
 static void CheckUp(S_SEARCHINFO *info) {
 	// .. check if time up, or interrupt from GUI
 	if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
@@ -1703,6 +1838,28 @@ int ProbePvTable(const S_BOARD *pos) {
 	return NOMOVE;
 }
 static
+int ProbePv2Table(const S_BOARD *pos) {
+
+	int index = pos->posKey % pos->pv2Table->numEntries;
+	
+	if( pos->pv2Table->pTable[index].posKey == pos->posKey ) {
+		return pos->pv2Table->pTable[index].move;
+	}
+	
+	return NOMOVE;
+}
+static int ProbePv2TableScore(const S_BOARD *pos)
+{
+	int index = pos->posKey % pos->pv2Table->numEntries;
+	
+	if( pos->pv2Table->pTable[index].posKey == pos->posKey ) {
+		return pos->pv2Table->pTable[index].score;
+	}
+	
+	return 0;
+
+}
+static
 int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 if(( info->nodes & 2047 ) == 0) {
 		CheckUp(info);
@@ -1821,7 +1978,6 @@ void ResetBoard(S_BOARD *pos) {
 static int Search(int trap)
 {
 	int bestMove = NOMOVE;
-	int bestScore = -INFINITE;
 	int currentDepth = 0;
 	int pvMoves = 0;
 	int pvNum = 0;
@@ -1829,9 +1985,9 @@ static int Search(int trap)
 	ClearForSearch(pos,info);
 	
 	// iterative deepening
-	for( currentDepth = 1; currentDepth <= info->depth; ++currentDepth ) {
-							// alpha	 beta
-		bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info,TRUE);
+	for( currentDepth = trap? 4:1; currentDepth <= info->depth; ++currentDepth ) {
+		bestScore = trap? AlphaBetaModified(-INFINITE, INFINITE, currentDepth, pos, info,TRUE):
+				  AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info,TRUE, TRUE);
 		
 		if(info->stopped == TRUE) {
 			break;
@@ -1839,7 +1995,7 @@ static int Search(int trap)
 		
 		pvMoves = GetPvLine(currentDepth, pos);
 		bestMove = pos->PvArray[0];
-		
+
 		printf("info score cp %d depth %d nodes %ld time %d ",
 			bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
 			
@@ -1860,18 +2016,31 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 	int move=Search(FALSE);
 	printf("bestmove %s\n",PrMove(move));	
 
-	info->starttime = GetTimeMs();
-	info->depth = MAXDEPTH;
-	info->timeset=FALSE;
-
 	MakeMove(pos, move);
-	int pv=ProbePvTable(pos);
-	MakeMove(pos, pv);
-	Search(TRUE);
+	move=ProbePvTable(pos);
+	MakeMove(pos, move);
+
+	info->starttime = GetTimeMs();
+	info->depth = 8;
+	info->timeset=FALSE;
+	move=Search(FALSE);
+	
+	move=ProbePvTable(pos);
+	int secondBestMove=ProbePv2Table(pos);
+	int secondBestScore=ProbePv2TableScore(pos);
+
+
+        printf("move is %s bestScore is %d secondBestMove %s secondBestScore is %d \n", PrMove(move), bestScore, PrMove(secondBestMove),secondBestScore);
+	if(secondBestScore + secondBestMoveThreshold > bestScore)
+	{
+
+	
+	}
 
 	TakeMove(pos);	
 	TakeMove(pos);
-		
+
+			
 }
 int SqAttacked(const int sq, const int side, const S_BOARD *pos) {
 
@@ -1965,6 +2134,14 @@ static void StoreHashEntry(S_BOARD *pos, const int move, int score, const int fl
 	pos->HashTable->pTable[index].flags = flags;
 	pos->HashTable->pTable[index].score = score;
 	pos->HashTable->pTable[index].depth = depth;
+
+}
+static void StorePv2Entry(S_BOARD *pos, const int move, int score) {
+	int index = pos->posKey % pos->pv2Table->numEntries;
+	
+	pos->pv2Table->pTable[index].move = move;
+    	pos->pv2Table->pTable[index].posKey = pos->posKey;
+	pos->pv2Table->pTable[index].score = score;
 
 }
 static void TakeMove(S_BOARD *pos) {
@@ -2105,7 +2282,7 @@ int main()
         setbuf(stdout, NULL);
 	line=calloc(INPUTBUFFER, sizeof(char));	
         InitHashTable(pos->HashTable);
-
+	InitHashTable(pos->pv2Table);
 //loops
 	while(1)
 	{

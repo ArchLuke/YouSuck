@@ -105,6 +105,7 @@ typedef struct {
 	int pList[13][10];	
 
 	S_HASHTABLE HashTable[1];	
+	S_HASHTABLE pv2Table[1];
 	int PvArray[MAXDEPTH];
 	
 	int searchHistory[13][BRD_SQ_NUM];
@@ -229,7 +230,8 @@ static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, co
 static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 static void AddPiece(const int sq, S_BOARD *pos, const int pce);
 static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull); 
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull,int topLevel); 
+static int AlphaBetaModified(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull) ;
 static void CheckUp(S_SEARCHINFO *info);
 static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 static void ClearPiece(const int sq, S_BOARD *pos);
@@ -280,9 +282,11 @@ static int PieceValidEmpty(const int pce);
 void PrintBitboard(U64 bb);
 void PrintBoard(const S_BOARD *pos);
 static void PrintPositionalEvals(S_BOARD *pos);
-static char * prmove(const int move);
+static char * PrMove(const int move);
 static int ProbeHashEntry(S_BOARD *pos, int *move, int *score, int alpha, int beta, const int depth);
 static int ProbePvTable(const S_BOARD *pos);
+static int ProbePv2Table(const S_BOARD *pos);
+static int ProbePv2TableScore(const S_BOARD *pos);
 static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info);
 static void ReadInput(S_SEARCHINFO *info);
 static void ResetBoard(S_BOARD *pos); 
@@ -292,6 +296,7 @@ int SqAttacked(const int sq, const int side, const S_BOARD *pos);
 static int SideValid(const int side);
 int SqOnBoard(const int sq);
 static void StoreHashEntry(S_BOARD *pos, const int move, const int score, const int flags, int depth);
+static void StorePv2Entry(S_BOARD *pos, const int move, const int score);
 static void TakeMove(S_BOARD *pos);
 static void TakeNullMove(S_BOARD *pos);
 static void Uci_Loop();
