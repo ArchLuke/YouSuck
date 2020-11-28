@@ -6,6 +6,9 @@
 
 typedef unsigned long long U64;
 
+#define THRESHOLD 50
+#define TRAPTHRESHOLD 100
+#define TRAPSEARCHDEPTH 6
 
 #define BRD_SQ_NUM 120
 #define INFINITE 30000
@@ -230,8 +233,8 @@ static void AddPawnCapMove( const S_BOARD *pos, const int from, const int to, co
 static void AddPawnMove( const S_BOARD *pos, const int from, const int to, S_MOVELIST *list );
 static void AddPiece(const int sq, S_BOARD *pos, const int pce);
 static void AddQuietMove( const S_BOARD *pos, int move, S_MOVELIST *list );
-static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull); 
-static int AlphaBetaModified(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull) ;
+static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info, int donull, S_MOVELIST *list, int listProvided); 
+static int CheckCaptures(S_BOARD  *pos, int pvMove,S_MOVELIST *list, int bestScore);
 static void CheckUp(S_SEARCHINFO *info);
 static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info);
 static void ClearPiece(const int sq, S_BOARD *pos);
@@ -274,13 +277,16 @@ static int MoveExists(S_BOARD *pos, const int move);
 static void MovePiece(const int from, const int to, S_BOARD *pos);
 static int ParseFen(char *fen, S_BOARD *pos);
 static void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos);
+static void ParsePop(char *line, S_MOVELIST *list);
 static void ParsePosition(char* linein, S_BOARD *pos);
 static int ParseMove(char *ptrchar, S_BOARD *pos);
 static void PickNextMove(int movenum, S_MOVELIST *list);
 static int PieceValid(const int pce);
 static int PieceValidEmpty(const int pce);
+static void PopMove(S_MOVELIST *list, int move);
 void PrintBitboard(U64 bb);
 void PrintBoard(const S_BOARD *pos);
+static void PrintMoves(const S_MOVELIST *list);
 static void PrintPositionalEvals(S_BOARD *pos);
 static char * PrMove(const int move);
 static int ProbeHashEntry(S_BOARD *pos, int *move, int *score, int alpha, int beta, const int depth);
@@ -299,6 +305,7 @@ static void StoreHashEntry(S_BOARD *pos, const int move, const int score, const 
 static void StorePv2Entry(S_BOARD *pos, const int move, const int score);
 static void TakeMove(S_BOARD *pos);
 static void TakeNullMove(S_BOARD *pos);
+static int TrapSearch(S_BOARD *pos, S_SEARCHINFO *info);
 static void Uci_Loop();
 static void UpdateListsMaterial(S_BOARD *pos);
 #endif
