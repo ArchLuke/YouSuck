@@ -342,7 +342,9 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 
     int refutationMove=NOMOVE;
     int trapScore=-INFINITE;
+
     printf("pvmove is %s \n", PrMove(pvMove));
+
     MakeMove(pos, pvMove);
     GenerateAllMoves(pos, list, TRUE);
 
@@ -353,11 +355,10 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 
     	int sq=TOSQ(capture);
 
-        printf("capture is %s %d \n", PrMove(capture), capture);
 
     	if(EvalCapture(pos, capture))
 	{
-		printf("Eval Capture passed\n");
+
 		MakeMove(pos, capture);    
 		S_MOVELIST moves[1];
 		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
@@ -366,12 +367,13 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 		    refutationMove=pos->HashTable->pTable[index].move;
 		}
 
-		printf("refutation is %s \n", PrMove(refutationMove));
 
 		if(score-TRAPTHRESHOLD>bestScore)
 		{
 		    if (! (refutationMove & MFLAGCAP))
 		    {
+        	    printf("capture is %s %d \n", PrMove(capture), capture);
+		    printf("refutation is %s \n", PrMove(refutationMove));
 		    printf("trap registered \n");
 		    if(score>trapScore)
 			trapScore=score;
@@ -380,7 +382,10 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 		    int capturedSq=TOSQ(refutationMove);
 		    if(capturedSq != sq)
 		    {
-			printf("trap registered \n");
+			 printf("capture is %s %d \n", PrMove(capture), capture);
+		    printf("refutation is %s \n", PrMove(refutationMove));
+		    printf("trap registered \n");
+
 			if(score>trapScore)
 			    trapScore=score;
 		    }
@@ -499,7 +504,7 @@ static void Console_Loop()
         {
             PrintPositionalEvals(pos);        
         }else if (strncmp(line, "genmoves", 8)==0)
-    {
+   	 {
         GenerateAllMoves(pos, list, FALSE);
         PrintMoves(list);
     
@@ -510,6 +515,8 @@ static void Console_Loop()
     else if(strncmp(line,"popmove", 7)==0)
     {
         ParsePop(line, list);
+    }else if(strncmp(line, "Evalcap",7)==0){
+	EvalCap(line, pos);
     }
     else if(strncmp(line, "q", 1)==0)
         {
@@ -521,6 +528,14 @@ int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
   return r;
+}
+static int EvalCap(char *line, const S_BOARD *pos)
+{
+	line += 8;
+	char *ptrChar=line;
+	int move=atoi(ptrChar);
+	printf("result is %d \n", EvalCapture(pos, move));
+
 }
 static int EvalCapture(const S_BOARD *pos, const int capture)
 {
@@ -539,7 +554,7 @@ static int EvalCapture(const S_BOARD *pos, const int capture)
 
     FillPieces(pos, attackers, attackingSide, tosq);
     FillPieces(pos, defenders, defendingSide, tosq);	
-	
+
     startingScore=EvalMaterial(pos, attackers, defenders);    
     score=startingScore + (PieceVal[attackedPce]);
 
@@ -703,7 +718,7 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
             pce = pos->pieces[t_sq];
         }
     }
-
+    int queenBeforeRook=FALSE;
     // rooks, queens
     for(index = 0; index < 4; ++index) {        
         dir = RkDir[index];
@@ -712,31 +727,40 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
         while(pce != OFFBOARD) {
             if(pce != EMPTY) {
                 if(IsRk(pce) && PieceCol[pce] == side) {
-		    if(pieces[count]==side?bQ:wQ)
+		    if((pos->pieces[pieces[count-1]]==(side?bQ:wQ)) && !queenBeforeRook)
 		    {
-			int sq=pieces[count];
-			pieces[count]=t_sq;
-			count ++;
-			pieces[count]=sq;
-			break;
-		    }
-		    if(pieces[count]==side?bB:wB && pieces[count-1]==side?bQ:wQ)
-		    {
-			int sq1=pieces[count-1];
-			int sq2=pieces[count];
+			int sq=pieces[count-1];
 			pieces[count-1]=t_sq;
-			pieces[count]=sq1;
-			count ++;
+			pieces[count]=sq;
+			
+			count++;
+	
+			t_sq += dir;
+			pce=pos->pieces[t_sq];
+			continue;
+		    }
+		    if((pos->pieces[pieces[count-1]]==(side?bB:wB)) && (pos->pieces[pieces[count-2]]==(side?bQ:wQ)))
+		    {
+			int sq1=pieces[count-2];
+			int sq2=pieces[count-1];
+			pieces[count-2]=t_sq;
+			pieces[count-1]=sq1;
 			pieces[count]=sq2;
-			break;
+			
+			count ++;
+			
+			t_sq += dir;
+			pce=pos->pieces[t_sq];
+			continue;
 				
 		    }
 		    pieces[count]=t_sq;
                     count ++;
-                }
-		if(IsQn(pce) && PieceCol[pce] == side) {
+                }else if(IsQn(pce) && PieceCol[pce] == side) {
 		    pieces[count]=t_sq;
-                    count ++;
+                    
+		    queenBeforeRook=TRUE;
+		    count ++;
 
 		}else
 			break;
@@ -1877,6 +1901,18 @@ static void PrintMoves(const S_MOVELIST *list)
         printf("move %d %s\n", list->moves[counter].move, PrMove(list->moves[counter].move));
 
     }
+
+}
+static void PrintPieceLists(int pieces[MAXPIECES])
+{
+
+for(int i=0;i<MAXPIECES; i++)
+{
+
+	int sq=pieces[i];
+	printf("piece value at index %d is %d \n", i, PieceVal[pos->pieces[sq]]);
+
+}
 
 }
 static
