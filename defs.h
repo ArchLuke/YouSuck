@@ -252,7 +252,7 @@ int EvalBlackPawns(const S_BOARD *pos);
 int EvalBlackQueen(const S_BOARD *pos);
 int EvalBlackRook(const S_BOARD *pos);
 static int EvalCap(char *line, const S_BOARD *pos);
-static int EvalCapture(const S_BOARD *pos, const int capture);
+static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove);
 static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], const int defenders[MAXPIECES]);
 static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);

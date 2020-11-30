@@ -356,7 +356,7 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
     	int sq=TOSQ(capture);
 
 
-    	if(EvalCapture(pos, capture))
+    	if(EvalCapture(pos, capture, pvMove))
 	{
 
 		MakeMove(pos, capture);    
@@ -534,10 +534,10 @@ static int EvalCap(char *line, const S_BOARD *pos)
 	line += 8;
 	char *ptrChar=line;
 	int move=atoi(ptrChar);
-	printf("result is %d \n", EvalCapture(pos, move));
+	printf("result is %d \n", EvalCapture(pos, move, NOMOVE));
 
 }
-static int EvalCapture(const S_BOARD *pos, const int capture)
+static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
 {
 
     int fromsq, tosq, attackingSide, defendingSide, attackingPce, attackedPce, startingScore, score;
@@ -551,6 +551,16 @@ static int EvalCapture(const S_BOARD *pos, const int capture)
     attackedPce=pos->pieces[tosq];
     attackingSide=PieceCol[attackingPce];
     defendingSide=attackingSide ^ 1;
+
+    if(pvMove & MFLAGCAP)
+    {
+	int capturedSq=TOSQ(pvMove);
+	if(capturedSq != tosq)
+	{
+		if((PieceVal[attackedPce]+10)<PieceVal[CAPTURED(pvMove)])
+			return FALSE;
+	}	
+    } 
 
     FillPieces(pos, attackers, attackingSide, tosq);
     FillPieces(pos, defenders, defendingSide, tosq);	
@@ -2217,8 +2227,6 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
     MakeMove(pos, move);
     int expectedMove=ProbePvTable(pos);
-    if(expectedMove==NOMOVE)
-    return;
     ExpectedMove=expectedMove;
     printf("expecting move %s from oponent \n",PrMove(expectedMove));    
     
