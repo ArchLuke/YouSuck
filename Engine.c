@@ -126,10 +126,13 @@ const char SideChar[] = "wb-";
 const int PieceBig[13] = { FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE };
 const int PiecePawn[13] = { FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE };
 
+const int PieceBishop[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE };
 const int PieceBishopQueen[13] = { FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE };
 const int PieceKing[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE };
 const int PieceKnight[13] = { FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE };
+const int PieceRook[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE };
 const int PieceRookQueen[13] = { FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE };
+const int PieceQueen[13] = { FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE };
 const int PieceSlides[13] = { FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE };
 
 
@@ -350,46 +353,39 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 
         printf("capture is %s \n", PrMove(capture));
 
-	int fromsq=FROMSQ(capture);
-	int sq=TOSQ(capture);
-	int side=pos->side;
-	int oppositeSide=side ^ 1;
-	int attackingPce=pos->pieces[fromsq];
-	int attackedPce=pos->pieces[sq];
+    if(EvalCapture(pos, capture))
+    {
 
-	if((EvalCapture(pos,oppositeSide, sq) < EvalCapture(pos,side, sq)) || (PieceVal[attackingPce]-10)<=PieceVal[attackedPce])
-	{
+        MakeMove(pos, capture);    
+        S_MOVELIST moves[1];
+        score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
+        int index = pos->posKey % pos->HashTable->numEntries;
+        if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+            refutationMove=pos->HashTable->pTable[index].move;
+        }
 
-		MakeMove(pos, capture);    
-		S_MOVELIST moves[1];
-		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
-		int index = pos->posKey % pos->HashTable->numEntries;
-		if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
-		    refutationMove=pos->HashTable->pTable[index].move;
-		}
+        printf("refutation is %s \n", PrMove(refutationMove));
 
-		printf("refutation is %s \n", PrMove(refutationMove));
+        if(score-TRAPTHRESHOLD>bestScore)
+        {
+            if (! (refutationMove & MFLAGCAP))
+            {
+            printf("trap registered \n");
+            if(score>trapScore)
+                trapScore=score;
+            }else{
 
-		if(score-TRAPTHRESHOLD>bestScore)
-		{
-		    if (! (refutationMove & MFLAGCAP))
-		    {
-			printf("trap registered \n");
-			if(score>trapScore)
-			    trapScore=score;
-		    }else{
-
-			int capturedSq=TOSQ(refutationMove);
-			if(capturedSq != sq)
-			{
-				printf("trap registered \n");
-				if(score>trapScore)
-					trapScore=score;
-			}
-		    }
-		}
-		TakeMove(pos);
-	}
+            int capturedSq=TOSQ(refutationMove);
+            if(capturedSq != sq)
+            {
+                printf("trap registered \n");
+                if(score>trapScore)
+                    trapScore=score;
+            }
+            }
+        }
+        TakeMove(pos);
+    }
     }
     TakeMove(pos);
     return trapScore;
@@ -524,86 +520,67 @@ int CountBits(U64 b) {
   for(r = 0; b; r++, b &= b - 1);
   return r;
 }
-static int EvalCapture(const S_BOARD *pos, const int side, const int sq)
-
+static int EvalCapture(const S_BOARD *pos, const int capture)
 {
-    int pce,index,t_sq,dir;
-    int count=0;
+
+    int fromsq, tosq, attackingSide, defendingSide, attackingPce, attackedPce, startingScore, score;
+
+    int attackers[MAXPIECES]={0};
+    int defenders[MAXPIECES]={0};
+
+    fromsq=FROMSQ(capture);
+    tosq=TOSQ(capture);
+    attackingSide=pos->side;
+    defendingSide=attackingSide ^ 1;
+    attackingPce=pos->pieces[fromsq];
+    attackedPce=pos->pieces[sq];
     
-    // pawn
-    if(side == WHITE) {
-        if(pos->pieces[sq-11] == wP) {
-            count ++;
-        }
-	if(pos->pieces[sq-9]==wP){
-	    count ++;
+    FillPieces(pos, attackers, attackingSide);
+    FillPieces(pos, defenders, defendingSide);	
+	
+    startingScore=EvalMaterial(pos, attackers, defenders);    
+    score=startingScore + pos->PieceVal[attackedPce];
+
+    for(int index=0;index<MAXPIECES;index++)
+    {
+	
+	score -= attackers[index];
+	
+	if (score>=startingScore)
+		return TRUE;
+
+	score += defenders[index];
+
+    }
+    return FALSE;
+
+}
+static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], const int defenders[MAXPIECES])
+{
+	int index;
+	int score=0;
+	for(index=0; index<MAXPIECES; index++)
+	{
+		int sq=attackers[index];
+		if(!sq)
+			continue;
+		int pce=pos->pieces[sq];
+		score += pos->PieceVal[pce];
+		
 	}
-    } else {
-        if(pos->pieces[sq+11] == bP) {
-            count ++;
-        }   
-	if(pos->pieces[sq+9] == bP) {
-            count ++;
-        }    
-    }
-    
-    // knights
-    for(index = 0; index < 8; ++index) {        
-        pce = pos->pieces[sq + KnDir[index]];
-        if(pce != OFFBOARD && IsKn(pce) && PieceCol[pce]==side) {
-            count ++;
+	
+	for(index=0; index<MAXPIECES; index++)
+	{
+		int sq=defenders[index];
+		if(!sq)
+			continue;
+		int pce=pos->pieces[sq];
+		score -= pos->PieceVal[pce];
+		
+	}
+	return score;
 
-        }
-    }
-    
-    // rooks, queens
-    for(index = 0; index < 4; ++index) {        
-        dir = RkDir[index];
-        t_sq = sq + dir;
-        pce = pos->pieces[t_sq];
-        while(pce != OFFBOARD) {
-            if(pce != EMPTY) {
-                if(IsRQ(pce) && PieceCol[pce] == side) {
 
-                    count ++;
-                }else
-			break;
-                
-            }
-            t_sq += dir;
-            pce = pos->pieces[t_sq];
-        }
-    }
-    
-    // bishops, queens
-    for(index = 0; index < 4; ++index) {        
-        dir = BiDir[index];
-        t_sq = sq + dir;
-        pce = pos->pieces[t_sq];
-        while(pce != OFFBOARD) {
-            if(pce != EMPTY) {
-                if(IsBQ(pce) && PieceCol[pce] == side) {
-                    count ++;
-
-                }else
-			break;
-                
-            }
-            t_sq += dir;
-            pce = pos->pieces[t_sq];
-        }
-    }
-    
-    // kings
-    for(index = 0; index < 8; ++index) {        
-        pce = pos->pieces[sq + KiDir[index]];
-        if(pce != OFFBOARD && IsKi(pce) && PieceCol[pce]==side) {
-            count ++;
-
-        }
-    }
-    
-    return count;
 
 }
 static int EvalPosition(const S_BOARD *pos) {
@@ -658,6 +635,119 @@ static int EvalPosition(const S_BOARD *pos) {
 }
 static int FileRankValid(const int fr) {
     return (fr >= 0 && fr <= 7) ? 1 : 0;
+}
+int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side) {
+    int pce,index,t_sq,dir;
+    int count=0;
+    // pawn
+    if(side == WHITE) {
+        if(pos->pieces[sq-11] == wP) {
+	    pieces[count]=sq-11;
+            count ++;
+        }
+	if(pos->pieces[sq-9]==wP){
+	    pieces[count]=sq-9;
+	    count ++;
+	}
+    } else {
+        if(pos->pieces[sq+11] == bP) {
+	    pieces[count]=sq+11;
+            count ++;
+        }   
+	if(pos->pieces[sq+9] == bP) {
+	    pieces[count]=sq+9;
+            count ++;
+        }    
+    }
+    
+    // knights
+    for(index = 0; index < 8; ++index) {        
+        pce = pos->pieces[sq + KnDir[index]];
+        if(pce != OFFBOARD && IsKn(pce) && PieceCol[pce]==side) {
+	    pieces[count]=sq+KnDir[index];
+            count ++;
+
+        }
+    }
+     
+    
+    // bishops
+    for(index = 0; index < 4; ++index) {        
+        dir = BiDir[index];
+        t_sq = sq + dir;
+        pce = pos->pieces[t_sq];
+        while(pce != OFFBOARD) {
+            if(pce != EMPTY) {
+                if(IsBQ(pce) && PieceCol[pce] == side) {
+		    pieces[count]=t_sq;
+                    count ++;
+
+                }else
+			break;
+		
+
+                
+            }
+            t_sq += dir;
+            pce = pos->pieces[t_sq];
+        }
+    }
+
+    // rooks, queens
+    for(index = 0; index < 4; ++index) {        
+        dir = RkDir[index];
+        t_sq = sq + dir;
+        pce = pos->pieces[t_sq];
+        while(pce != OFFBOARD) {
+            if(pce != EMPTY) {
+                if(IsRk(pce) && PieceCol[pce] == side) {
+		    if(pieces[count]==side?bQ:wQ)
+		    {
+			int sq=pieces[count];
+			pieces[count]=t_sq;
+			count ++;
+			pieces[count]=sq;
+			break;
+		    }
+		    if(pieces[count]==side?bB:wB && pieces[count-1]==side?bQ:wQ)
+		    {
+			int sq1=pieces[count-1];
+			int sq2=pieces[count];
+			pieces[count-1]=t_sq;
+			pieces[count]=sq1;
+			count ++;
+			pieces[count]=sq2;
+			break;
+				
+		    }
+		    pieces[count]=t_sq;
+                    count ++;
+                }
+		if(IsQn(pce) && PieceCol[pce] == side) {
+		    pieces[count]=t_sq;
+                    count ++;
+
+		}else
+			break;
+                
+            }
+            t_sq += dir;
+            pce = pos->pieces[t_sq];
+        }
+    }
+       
+    // kings
+    for(index = 0; index < 8; ++index) {        
+        pce = pos->pieces[sq + KiDir[index]];
+        if(pce != OFFBOARD && IsKi(pce) && PieceCol[pce]==side) {
+	    pieces[count]=sq+KiDir[index];
+            count ++;
+
+        }
+    }
+    
+    return count;
+      
 }
 int FindBit(U64 bb) {
   U64 b = bb ^ (bb - 1);
@@ -832,7 +922,6 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
         pce = LoopNonSlidePce[pceIndex++];
     }
 }
-
 
 
 static U64 GeneratePosKey(const S_BOARD *pos) {
@@ -1243,7 +1332,7 @@ int IsRepetition(const S_BOARD *pos) {
 
     int index = 0;
 
-    for(index = pos->hisPly - pos->fiftyMove; index < pos->hisPly-1; ++index) {    
+    for(index = pos->hisPly - po1s->fiftyMove; index < pos->hisPly-1; ++index) {    
         if(pos->posKey == pos->history[index].posKey) {
             return TRUE;
         }
@@ -1968,6 +2057,7 @@ if(( info->nodes & 2047 ) == 0) {
     
     return alpha;
 }
+
 static
 void ReadInput(S_SEARCHINFO *info) {
     int bytes;

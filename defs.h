@@ -14,6 +14,7 @@ typedef unsigned long long U64;
 #define INFINITE 30000
 #define INPUTBUFFER 2560
 #define ISMATE (INFINITE-MAXDEPTH)
+#define MAXPIECES 10
 #define MAXDEPTH 64
 #define MAXGAMEMOVES 2048
 #define MAXPOSITIONMOVES 256
@@ -169,10 +170,13 @@ typedef struct {
 #define HASH_EP (pos->posKey ^= (PieceKeys[EMPTY][(pos->enPas)]))
 #define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))
 #define HASH_SIDE (pos->posKey ^= (SideKey))
+#define IsBi(p) (PieceBishop[(p)])
 #define IsBQ(p) (PieceBishopQueen[(p)])
 #define IsKi(p) (PieceKing[(p)])
 #define IsKn(p) (PieceKnight[(p)])
+#define IsRk(p) (PieceRook[(p)])
 #define IsRQ(p) (PieceRookQueen[(p)])
+#define UsQn(p) (PieceQueen[(p)])
 #define MIRROR64(sq) (Mirror64[(sq)])
 #define MOVE(f,t,ca,pro,fl) ( (f) | ((t) << 7) | ( (ca) << 14 ) | ( (pro) << 20 ) | (fl))
 #define RAND_64 ((U64)rand() | \
@@ -247,7 +251,8 @@ int EvalBlackKnight(const S_BOARD *pos);
 int EvalBlackPawns(const S_BOARD *pos);
 int EvalBlackQueen(const S_BOARD *pos);
 int EvalBlackRook(const S_BOARD *pos);
-static int EvalCapture(const S_BOARD *pos, const int side, const int sq);
+static int EvalCapture(const S_BOARD *pos, const int capture);
+static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], const int defenders[MAXPIECES]);
 static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);
 int EvalWhiteKing(const S_BOARD *pos);
@@ -256,6 +261,7 @@ int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteQueen(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
 static int FileRankValid(const int fr);
+static int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], int side)
 int FindBit(U64 b);
 static void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 static U64 GeneratePosKey(const S_BOARD *pos);
