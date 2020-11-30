@@ -176,7 +176,7 @@ typedef struct {
 #define IsKn(p) (PieceKnight[(p)])
 #define IsRk(p) (PieceRook[(p)])
 #define IsRQ(p) (PieceRookQueen[(p)])
-#define UsQn(p) (PieceQueen[(p)])
+#define IsQn(p) (PieceQueen[(p)])
 #define MIRROR64(sq) (Mirror64[(sq)])
 #define MOVE(f,t,ca,pro,fl) ( (f) | ((t) << 7) | ( (ca) << 14 ) | ( (pro) << 20 ) | (fl))
 #define RAND_64 ((U64)rand() | \
@@ -261,7 +261,7 @@ int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteQueen(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
 static int FileRankValid(const int fr);
-static int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], int side)
+static int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], int side, int sq);
 int FindBit(U64 b);
 static void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 static U64 GeneratePosKey(const S_BOARD *pos);

@@ -351,41 +351,43 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 
         int capture=list->moves[counter].move;
 
+    	int sq=TOSQ(capture);
+
         printf("capture is %s \n", PrMove(capture));
 
-    if(EvalCapture(pos, capture))
-    {
+    	if(EvalCapture(pos, capture))
+	{
 
-        MakeMove(pos, capture);    
-        S_MOVELIST moves[1];
-        score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
-        int index = pos->posKey % pos->HashTable->numEntries;
-        if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
-            refutationMove=pos->HashTable->pTable[index].move;
-        }
+		MakeMove(pos, capture);    
+		S_MOVELIST moves[1];
+		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
+		int index = pos->posKey % pos->HashTable->numEntries;
+		if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+		    refutationMove=pos->HashTable->pTable[index].move;
+		}
 
-        printf("refutation is %s \n", PrMove(refutationMove));
+		printf("refutation is %s \n", PrMove(refutationMove));
 
-        if(score-TRAPTHRESHOLD>bestScore)
-        {
-            if (! (refutationMove & MFLAGCAP))
-            {
-            printf("trap registered \n");
-            if(score>trapScore)
-                trapScore=score;
-            }else{
+		if(score-TRAPTHRESHOLD>bestScore)
+		{
+		    if (! (refutationMove & MFLAGCAP))
+		    {
+		    printf("trap registered \n");
+		    if(score>trapScore)
+			trapScore=score;
+		    }else{
 
-            int capturedSq=TOSQ(refutationMove);
-            if(capturedSq != sq)
-            {
-                printf("trap registered \n");
-                if(score>trapScore)
-                    trapScore=score;
-            }
-            }
-        }
-        TakeMove(pos);
-    }
+		    int capturedSq=TOSQ(refutationMove);
+		    if(capturedSq != sq)
+		    {
+			printf("trap registered \n");
+			if(score>trapScore)
+			    trapScore=score;
+		    }
+		    }
+		}
+		TakeMove(pos);
+	}
     }
     TakeMove(pos);
     return trapScore;
@@ -533,13 +535,13 @@ static int EvalCapture(const S_BOARD *pos, const int capture)
     attackingSide=pos->side;
     defendingSide=attackingSide ^ 1;
     attackingPce=pos->pieces[fromsq];
-    attackedPce=pos->pieces[sq];
+    attackedPce=pos->pieces[tosq];
     
-    FillPieces(pos, attackers, attackingSide);
-    FillPieces(pos, defenders, defendingSide);	
+    FillPieces(pos, attackers, attackingSide, tosq);
+    FillPieces(pos, defenders, defendingSide, tosq);	
 	
     startingScore=EvalMaterial(pos, attackers, defenders);    
-    score=startingScore + pos->PieceVal[attackedPce];
+    score=startingScore + (PieceVal[attackedPce]);
 
     for(int index=0;index<MAXPIECES;index++)
     {
@@ -565,7 +567,7 @@ static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], cons
 		if(!sq)
 			continue;
 		int pce=pos->pieces[sq];
-		score += pos->PieceVal[pce];
+		score += PieceVal[pce];
 		
 	}
 	
@@ -575,7 +577,7 @@ static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], cons
 		if(!sq)
 			continue;
 		int pce=pos->pieces[sq];
-		score -= pos->PieceVal[pce];
+		score -= PieceVal[pce];
 		
 	}
 	return score;
@@ -636,7 +638,7 @@ static int EvalPosition(const S_BOARD *pos) {
 static int FileRankValid(const int fr) {
     return (fr >= 0 && fr <= 7) ? 1 : 0;
 }
-int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side) {
+int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq) {
     int pce,index,t_sq,dir;
     int count=0;
     // pawn
@@ -1332,7 +1334,7 @@ int IsRepetition(const S_BOARD *pos) {
 
     int index = 0;
 
-    for(index = pos->hisPly - po1s->fiftyMove; index < pos->hisPly-1; ++index) {    
+    for(index = pos->hisPly - pos->fiftyMove; index < pos->hisPly-1; ++index) {    
         if(pos->posKey == pos->history[index].posKey) {
             return TRUE;
         }
