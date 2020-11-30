@@ -342,29 +342,54 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
     printf("pvmove is %s \n", PrMove(pvMove));
     MakeMove(pos, pvMove);
     GenerateAllMoves(pos, list, TRUE);
+
     for(counter=0;counter<list->count;counter++)
     {
-        int capture=list->moves[counter].move;
-        printf("capture is %s \n", PrMove(capture));
-        MakeMove(pos, capture);    
-        S_MOVELIST moves[1];
-        score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
-        int index = pos->posKey % pos->HashTable->numEntries;
-        if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
-            refutationMove=pos->HashTable->pTable[index].move;
-        }
-        printf("refutation is %s \n", PrMove(refutationMove));
-        if(score-TRAPTHRESHOLD>bestScore)
-        {
-            if (! (refutationMove & MFLAGCAP))
-            {
-                printf("trap registered \n");
-                if(score>trapScore)
-                    trapScore=score;
-            }
-        }
-        TakeMove(pos);
 
+        int capture=list->moves[counter].move;
+
+        printf("capture is %s \n", PrMove(capture));
+
+	int fromsq=FROMSQ(capture);
+	int sq=TOSQ(capture);
+	int side=pos->side;
+	int oppositeSide=side ^ 1;
+	int attackingPce=pos->pieces[fromsq];
+	int attackedPce=pos->pieces[sq];
+
+	if((EvalCapture(pos,oppositeSide, sq) < EvalCapture(pos,side, sq)) || (PieceVal[attackingPce]-10)<=PieceVal[attackedPce])
+	{
+
+		MakeMove(pos, capture);    
+		S_MOVELIST moves[1];
+		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
+		int index = pos->posKey % pos->HashTable->numEntries;
+		if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+		    refutationMove=pos->HashTable->pTable[index].move;
+		}
+
+		printf("refutation is %s \n", PrMove(refutationMove));
+
+		if(score-TRAPTHRESHOLD>bestScore)
+		{
+		    if (! (refutationMove & MFLAGCAP))
+		    {
+			printf("trap registered \n");
+			if(score>trapScore)
+			    trapScore=score;
+		    }else{
+
+			int capturedSq=TOSQ(refutationMove);
+			if(capturedSq != sq)
+			{
+				printf("trap registed \n");
+				if(score>trapScore)
+					trapScore=score;
+			}
+		    }
+		}
+		TakeMove(pos);
+	}
     }
     TakeMove(pos);
     return trapScore;
@@ -498,6 +523,88 @@ int CountBits(U64 b) {
   int r;
   for(r = 0; b; r++, b &= b - 1);
   return r;
+}
+static int EvalCapture(const S_BOARD *pos, const int side, const int sq)
+
+{
+    int pce,index,t_sq,dir;
+    int count=0;
+    
+    // pawn
+    if(side == WHITE) {
+        if(pos->pieces[sq-11] == wP) {
+            count ++;
+        }
+	if(pos->pieces[sq-9]==wP){
+	    count ++;
+	}
+    } else {
+        if(pos->pieces[sq+11] == bP) {
+            count ++;
+        }   
+	if(pos->pieces[sq+9] == bP) {
+            count ++;
+        }    
+    }
+    
+    // knights
+    for(index = 0; index < 8; ++index) {        
+        pce = pos->pieces[sq + KnDir[index]];
+        if(pce != OFFBOARD && IsKn(pce) && PieceCol[pce]==side) {
+            count ++;
+
+        }
+    }
+    
+    // rooks, queens
+    for(index = 0; index < 4; ++index) {        
+        dir = RkDir[index];
+        t_sq = sq + dir;
+        pce = pos->pieces[t_sq];
+        while(pce != OFFBOARD) {
+            if(pce != EMPTY) {
+                if(IsRQ(pce) && PieceCol[pce] == side) {
+
+                    count ++;
+                }else
+			break;
+                
+            }
+            t_sq += dir;
+            pce = pos->pieces[t_sq];
+        }
+    }
+    
+    // bishops, queens
+    for(index = 0; index < 4; ++index) {        
+        dir = BiDir[index];
+        t_sq = sq + dir;
+        pce = pos->pieces[t_sq];
+        while(pce != OFFBOARD) {
+            if(pce != EMPTY) {
+                if(IsBQ(pce) && PieceCol[pce] == side) {
+                    count ++;
+
+                }else
+			break;
+                
+            }
+            t_sq += dir;
+            pce = pos->pieces[t_sq];
+        }
+    }
+    
+    // kings
+    for(index = 0; index < 8; ++index) {        
+        pce = pos->pieces[sq + KiDir[index]];
+        if(pce != OFFBOARD && IsKi(pce) && PieceCol[pce]==side) {
+            count ++;
+
+        }
+    }
+    
+    return count;
+
 }
 static int EvalPosition(const S_BOARD *pos) {
 

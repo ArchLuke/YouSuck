@@ -247,6 +247,7 @@ int EvalBlackKnight(const S_BOARD *pos);
 int EvalBlackPawns(const S_BOARD *pos);
 int EvalBlackQueen(const S_BOARD *pos);
 int EvalBlackRook(const S_BOARD *pos);
+static int EvalCapture(const S_BOARD *pos, const int side, const int sq);
 static int EvalPosition(const S_BOARD *pos);
 int EvalWhiteBishop(const S_BOARD *pos);
 int EvalWhiteKing(const S_BOARD *pos);
