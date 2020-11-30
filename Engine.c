@@ -382,7 +382,7 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 			int capturedSq=TOSQ(refutationMove);
 			if(capturedSq != sq)
 			{
-				printf("trap registed \n");
+				printf("trap registered \n");
 				if(score>trapScore)
 					trapScore=score;
 			}
