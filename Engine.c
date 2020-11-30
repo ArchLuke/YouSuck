@@ -53,6 +53,8 @@ int RanksBrd[BRD_SQ_NUM];
 
 
 //local variables
+int ExpectedMove=NOMOVE;
+int trapMove=NOMOVE;
 U64 CastleKeys[16];
 U64 PieceKeys[13][120];
 U64 SideKey;
@@ -63,7 +65,7 @@ S_BOARD pos[1];
 S_SEARCHINFO info[1];
 
 const int Castle=5;
-const int HashSize = 0x100000 * 500;
+const int HashSize = 0x100000 * 160 ;
 
 const int BitTable[64] = {
   63, 30, 3, 32, 25, 41, 22, 33, 15, 50, 42, 13, 11, 53, 19, 34, 61, 29, 2,
@@ -217,7 +219,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
     if(((IsRepetition(pos) && !listProvided) || pos->fiftyMove >= 100) && pos->ply) {    
         return 0;
     }
-  
+ 
     if(pos->ply > MAXDEPTH - 1) {
         return EvalPosition(pos);
     }
@@ -238,7 +240,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 
     if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
         MakeNullMove(pos);
-	S_MOVELIST list2[1];	
+    S_MOVELIST list2[1];    
         Score = -AlphaBeta( -beta, -beta + 1, depth-4, pos, info, FALSE, list2, FALSE);
         TakeNullMove(pos);
         if(info->stopped == TRUE) {
@@ -277,7 +279,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
             continue;
         }
         Legal++;
-	S_MOVELIST list3[1];
+    S_MOVELIST list3[1];
         Score = -AlphaBeta( -beta, -alpha, depth-1, pos, info, TRUE, list3, FALSE);
         TakeMove(pos);
         
@@ -331,37 +333,41 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 }
 static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScore)
 {
-	int counter;
-	int score=-INFINITE;
+    int counter;
+    int score=-INFINITE;
+    int index=0;
 
-	int refutationMove=NOMOVE;
+    int refutationMove=NOMOVE;
+    int trapScore=-INFINITE;
+    printf("pvmove is %s \n", PrMove(pvMove));
+    MakeMove(pos, pvMove);
+    GenerateAllMoves(pos, list, TRUE);
+    for(counter=0;counter<list->count;counter++)
+    {
+        int capture=list->moves[counter].move;
+        printf("capture is %s \n", PrMove(capture));
+        MakeMove(pos, capture);    
+        S_MOVELIST moves[1];
+        score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
+        int index = pos->posKey % pos->HashTable->numEntries;
+        if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+            refutationMove=pos->HashTable->pTable[index].move;
+        }
+        printf("refutation is %s \n", PrMove(refutationMove));
+        if(score-TRAPTHRESHOLD>bestScore)
+        {
+            if (! (refutationMove & MFLAGCAP))
+            {
+                printf("trap registered \n");
+                if(score>trapScore)
+                    trapScore=score;
+            }
+        }
+        TakeMove(pos);
 
-	MakeMove(pos, pvMove);
-	GenerateAllMoves(pos, list, TRUE);
-	for(counter=0;counter<list->count;counter++)
-	{
-		int capture=list->moves[counter].move;
-		printf("examining capture %s \n", PrMove(capture));
-		MakeMove(pos, capture);	
-		S_MOVELIST moves[1];
-		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
-
-		if(score-TRAPTHRESHOLD>bestScore)
-		{
-			GetPvLine(1, pos);
-			refutationMove=pos->PvArray[0];
-			printf("refutation found is %s\n", PrMove(refutationMove));
-			if (! (refutationMove & MFLAGCAP))
-			{ 
-				printf("trap registered \n");
-				//register trap
-			}
-		}
-		TakeMove(pos);
-
-	}
-	TakeMove(pos);
-
+    }
+    TakeMove(pos);
+    return trapScore;
 
 
 }
@@ -451,7 +457,7 @@ static void ClearHashTable(S_HASHTABLE *table) {
  }
 static void Console_Loop()
 {
-	
+    
     printf("mode is console\n");
     S_MOVELIST list[1];
     while(1)
@@ -470,19 +476,19 @@ static void Console_Loop()
         {
             PrintPositionalEvals(pos);        
         }else if (strncmp(line, "genmoves", 8)==0)
-	{
-		GenerateAllMoves(pos, list, FALSE);
-		PrintMoves(list);
-	
-	}else if (strncmp (line, "printmoves", 10)==0)
-	{
-		PrintMoves(list);
-	}
-	else if(strncmp(line,"popmove", 7)==0)
-	{
-		ParsePop(line, list);
-	}
-	else if(strncmp(line, "q", 1)==0)
+    {
+        GenerateAllMoves(pos, list, FALSE);
+        PrintMoves(list);
+    
+    }else if (strncmp (line, "printmoves", 10)==0)
+    {
+        PrintMoves(list);
+    }
+    else if(strncmp(line,"popmove", 7)==0)
+    {
+        ParsePop(line, list);
+    }
+    else if(strncmp(line, "q", 1)==0)
         {
             break;        
         }
@@ -554,7 +560,8 @@ int FindBit(U64 bb) {
 static
 void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
     
- list->count = 0;    
+    
+    list->count = 0;    
     
     int pce = EMPTY;
     int side = pos->side;
@@ -720,6 +727,7 @@ void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only) {
 }
 
 
+
 static U64 GeneratePosKey(const S_BOARD *pos) {
 
     int sq = 0;
@@ -765,7 +773,7 @@ int GetPvLine(const int depth, S_BOARD *pos) {
         move = ProbePvTable(pos);    
     }
     
-    for(int i=0;i<depth;i++) {
+    while(pos->ply > 0) {
         TakeMove(pos);
     }
     
@@ -1474,13 +1482,13 @@ void ParseGo(char* line, S_SEARCHINFO *info, S_BOARD *pos) {
 }
 static void ParsePop(char *lineIn, S_MOVELIST *list)
 {
-	
-	lineIn += 8;
-	char *ptrChar=lineIn;
+    
+    lineIn += 8;
+    char *ptrChar=lineIn;
 
-	int move=atoi(ptrChar);
-	printf("popping move %d \n", move);
-	PopMove(list, move);
+    int move=atoi(ptrChar);
+    printf("popping move %d \n", move);
+    PopMove(list, move);
 
 }
 static
@@ -1515,11 +1523,9 @@ void ParsePosition(char* lineIn, S_BOARD *pos) {
               ptrChar++;
         }
     }
-    PrintBoard(pos);    
 }
 static
 int ParseMove(char *ptrChar, S_BOARD *pos) {
-    printf("move to parse is %s", ptrChar);
     if(ptrChar[1] > '8' || ptrChar[1] < '1') return NOMOVE;
     if(ptrChar[3] > '8' || ptrChar[3] < '1') return NOMOVE;
     if(ptrChar[0] > 'h' || ptrChar[0] < 'a') return NOMOVE;
@@ -1582,22 +1588,25 @@ int PieceValidEmpty(const int pce) {
 }
 static void PopMove(S_MOVELIST *list, int move)
 {
-	int counter;
-	int index;
-	for(counter=0;counter<list->count; counter++)
-	{
-		if(move==list->moves[counter].move)
-			index=counter;
-	}
-	for(counter=index; counter<list->count-1; counter++)
-	{
-		list->moves[counter]=list->moves[counter+1];
+    int counter;
+    int index=-1;
+    for(counter=0;counter<list->count; counter++)
+    {
+        if(move==list->moves[counter].move)
+            index=counter;
+    }
+    if(index==-1)
+        return;
+    for(counter=index; counter<list->count-1; counter++)
+    {
+        list->moves[counter]=list->moves[counter+1];
 
-	}
-	list->count --;
-	
+    }
+    list->count --;
+    
 
 }
+
 void PrintBitBoard(U64 bb) {
 
     U64 shiftMe = 1ULL;
@@ -1656,11 +1665,11 @@ void PrintBoard(const S_BOARD *pos) {
 }
 static void PrintMoves(const S_MOVELIST *list)
 {
-	for(int counter=0;counter<list->count;counter++)
-	{
-		printf("move %d %s\n", list->moves[counter].move, PrMove(list->moves[counter].move));
+    for(int counter=0;counter<list->count;counter++)
+    {
+        printf("move %d %s\n", list->moves[counter].move, PrMove(list->moves[counter].move));
 
-	}
+    }
 
 }
 static
@@ -1914,7 +1923,7 @@ static int Search(int trap)
     
     // iterative deepening
     for( currentDepth = 1; currentDepth <= info->depth; ++currentDepth ) {
-	S_MOVELIST list[1];
+    S_MOVELIST list[1];
                             // alpha     beta
         bestScore = AlphaBeta(-INFINITE, INFINITE, currentDepth, pos, info,TRUE, list, FALSE);
         
@@ -1941,7 +1950,19 @@ static int Search(int trap)
 }
 static
 void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
+
+    int lastMove = pos->history[pos->hisPly-1].move;
+    printf("lastMove is %s\n", PrMove(lastMove)) ;
+    printf("expected move is %s \n", PrMove(ExpectedMove));
+    if((trapMove != NOMOVE) && (lastMove == ExpectedMove))
+    {
+    printf("playing trap \n");
+    printf("bestmove %s \n", PrMove(trapMove));
+    trapMove=NOMOVE;
+    ExpectedMove=NOMOVE;
+    return;
     
+    }
     int move=Search(FALSE);
     printf("bestmove %s\n",PrMove(move));    
 
@@ -1952,7 +1973,11 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
     MakeMove(pos, move);
     int expectedMove=ProbePvTable(pos);
+    if(expectedMove==NOMOVE)
+    return;
+    ExpectedMove=expectedMove;
     printf("expecting move %s from oponent \n",PrMove(expectedMove));    
+    
     MakeMove(pos, expectedMove);
     TrapSearch(pos, info);
 }
@@ -2126,50 +2151,69 @@ void TakeNullMove(S_BOARD *pos) {
 }
 static int TrapSearch(S_BOARD *pos, S_SEARCHINFO *info)
 {
-	printf("trap search starting \n");
+    printf("trap search starting \n");
         S_MOVELIST list[1];
-	S_MOVELIST captures[1];
-	int counter;
-	int depth;
-	int index;
+    S_MOVELIST captures[1];
+    int counter;
+    int depth;
+    int index;
 
-	int bestMove=NOMOVE;
-	int pvMove=NOMOVE;
-	int bestScore=-INFINITE;
-	int score=-INFINITE;
-	int trapScore=-INFINITE;
+    int bestMove=NOMOVE;
+    int pvMove=NOMOVE;
+    int bestScore=-INFINITE;
+    int score=-INFINITE;
+    int trapScore=-INFINITE;
+    int bestTrapScore=-INFINITE;
+    int trap=NOMOVE;
 
-	index=pos->posKey % pos->HashTable->numEntries;
-	bestMove=pos->HashTable->pTable[index].move;	
-	printf("bestmove %s \n", PrMove(bestMove));
-	bestScore=pos->HashTable->pTable[index].score;
-	printf("bestscore %d \n", bestScore);
-	depth=pos->HashTable->pTable[index].depth;
-	printf("search depth %d \n", depth);
-	pvMove=bestMove;
-	trapScore=CheckCaptures(pos, pvMove, captures, bestScore);
+    index=pos->posKey % pos->HashTable->numEntries;
+    if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+        bestMove=pos->HashTable->pTable[index].move;    
+        bestScore=pos->HashTable->pTable[index].score;
+        if(bestScore>500)
+            return -INFINITE;
+        depth=pos->HashTable->pTable[index].depth;
+        pvMove=bestMove;
+        trapScore=CheckCaptures(pos, pvMove, captures, bestScore);
+        if (trapScore>bestTrapScore)
+        {
+
+            bestTrapScore=trapScore;
+            trap=pvMove;
+        }
         GenerateAllMoves(pos,list, FALSE);
-	
-	int count=list->count;
-	for(counter=0;counter <= count;counter++)
-	{
-		if(info->stopped==TRUE)
-			break;
-		PopMove(list, pvMove);
-		score=AlphaBeta(-INFINITE, INFINITE, depth, pos, info, TRUE, list, TRUE);
-		if (score+THRESHOLD>bestScore)
-		{
-			//check captures
-			GetPvLine(1, pos);
-			pvMove=pos->PvArray[0];
-			printf("pvMove is %s \n", PrMove(pvMove));
-			trapScore=CheckCaptures(pos, pvMove, captures, bestScore);
-							
-		}else
-			break;
-			
-	} 
-	
+    }else{
+        return -INFINITE;
+    }
+    
+    int count=list->count;
+    for(counter=0;counter <= count;counter++)
+    {
+        if(info->stopped==TRUE)
+            break;
+        PopMove(list, pvMove);
+        score=AlphaBeta(-INFINITE, INFINITE, depth, pos, info, TRUE, list, TRUE);
+        
+        if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
+            pvMove=pos->HashTable->pTable[index].move;
+        }
+        if (score+THRESHOLD>bestScore)
+        {
+            //check captures
+            trapScore=CheckCaptures(pos, pvMove, captures, bestScore);
+            if(trapScore>bestTrapScore)
+            {
+
+                bestTrapScore=trapScore;
+                trap=pvMove;
+            }                
+        }else
+            break;
+            
+    }
+    trapMove=trap;
+    printf("trap search exitting with trapscore %d and trap move %s \n", bestTrapScore, PrMove(trapMove));
+    return bestTrapScore;
 
 }
 static
