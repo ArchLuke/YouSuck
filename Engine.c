@@ -346,6 +346,9 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
     printf("pvmove is %s \n", PrMove(pvMove));
 
     MakeMove(pos, pvMove);
+    
+    if(SqAttacked(pos->KingSq[pos->side],pos->side^1,pos))
+	return -INFINITE;
     GenerateAllMoves(pos, list, TRUE);
 
     for(counter=0;counter<list->count;counter++)
@@ -2227,6 +2230,8 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
     MakeMove(pos, move);
     int expectedMove=ProbePvTable(pos);
+    if(!expectedMove)
+	return;
     ExpectedMove=expectedMove;
     printf("expecting move %s from oponent \n",PrMove(expectedMove));    
     
