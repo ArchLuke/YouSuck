@@ -353,11 +353,11 @@ static int CheckCaptures(S_BOARD *pos, int pvMove,S_MOVELIST *list, int bestScor
 
     	int sq=TOSQ(capture);
 
-        printf("capture is %s \n", PrMove(capture));
+        printf("capture is %s %d \n", PrMove(capture), capture);
 
     	if(EvalCapture(pos, capture))
 	{
-
+		printf("Eval Capture passed\n");
 		MakeMove(pos, capture);    
 		S_MOVELIST moves[1];
 		score=AlphaBeta(-INFINITE, INFINITE, TRAPSEARCHDEPTH, pos, info, TRUE, moves, FALSE);
@@ -532,11 +532,11 @@ static int EvalCapture(const S_BOARD *pos, const int capture)
 
     fromsq=FROMSQ(capture);
     tosq=TOSQ(capture);
-    attackingSide=pos->side;
-    defendingSide=attackingSide ^ 1;
     attackingPce=pos->pieces[fromsq];
     attackedPce=pos->pieces[tosq];
-    
+    attackingSide=PieceCol[attackingPce];
+    defendingSide=attackingSide ^ 1;
+
     FillPieces(pos, attackers, attackingSide, tosq);
     FillPieces(pos, defenders, defendingSide, tosq);	
 	
@@ -546,12 +546,21 @@ static int EvalCapture(const S_BOARD *pos, const int capture)
     for(int index=0;index<MAXPIECES;index++)
     {
 	
-	score -= attackers[index];
+	int attackerLocation=attackers[index];
+	
+	if(!attackerLocation)
+		return FALSE;
+	
+	score -= PieceVal[pos->pieces[attackerLocation]];
 	
 	if (score>=startingScore)
 		return TRUE;
 
-	score += defenders[index];
+	int defenderLocation=defenders[index];
+	if(defenderLocation)
+	{
+		score += PieceVal[pos->pieces[defenderLocation]];
+	}
 
     }
     return FALSE;
