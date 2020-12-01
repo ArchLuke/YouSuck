@@ -1,1 +1,2 @@
-A chess engine that loves to trash talk. Program is written with c. GUI is done via Qt.
+A chess engine that plays for traps. The trap must still be a good move even if the opponent doesn't fall for it. 
+To compile the engine, run make. An executable 'YouSuck' will be generated. YouSuck is only compatible with UCI. It does not accept the XBOARD protocol. 
