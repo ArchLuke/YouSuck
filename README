@@ -1,1 +1,3 @@
-A chess engine that plays for traps. GUI has not been done yet
+A chess engine that plays for traps. The trap must still be a good move even if the opponent doesn't fall for it.
+To compile the engine, run make. An executable 'YouSuck' will be generated. YouSuck is only compatible with UCI. It does not accept the XBOARD protocol.
+A separate GUI will be added. Once done, the engine will be able to trash talk. 
