@@ -543,7 +543,7 @@ static int EvalCap(char *line, const S_BOARD *pos)
 static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
 {
 
-    int fromsq, tosq, attackingSide, defendingSide, attackingPce, attackedPce, startingScore, score;
+    int fromsq, tosq, attackingSide, defendingSide, attackingPce, attackedPce, score;
 
     int attackers[MAXPIECES]={0};
     int defenders[MAXPIECES]={0};
@@ -568,8 +568,7 @@ static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
     FillPieces(pos, attackers, attackingSide, tosq);
     FillPieces(pos, defenders, defendingSide, tosq);	
 
-    startingScore=EvalMaterial(pos, attackers, defenders);    
-    score=startingScore + (PieceVal[attackedPce]);
+    score=PieceVal[attackedPce];
 
     for(int index=0;index<MAXPIECES;index++)
     {
@@ -581,7 +580,7 @@ static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
 	
 	score -= PieceVal[pos->pieces[attackerLocation]];
 	
-	if (score>=startingScore)
+	if (score>=0)
 		return TRUE;
 
 	int defenderLocation=defenders[index];
@@ -594,34 +593,7 @@ static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
     return FALSE;
 
 }
-static int EvalMaterial(const S_BOARD *pos, const int attackers[MAXPIECES], const int defenders[MAXPIECES])
-{
-	int index;
-	int score=0;
-	for(index=0; index<MAXPIECES; index++)
-	{
-		int sq=attackers[index];
-		if(!sq)
-			continue;
-		int pce=pos->pieces[sq];
-		score += PieceVal[pce];
-		
-	}
-	
-	for(index=0; index<MAXPIECES; index++)
-	{
-		int sq=defenders[index];
-		if(!sq)
-			continue;
-		int pce=pos->pieces[sq];
-		score -= PieceVal[pce];
-		
-	}
-	return score;
 
-
-
-}
 static int EvalPosition(const S_BOARD *pos) {
 
     int pce;

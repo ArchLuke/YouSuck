@@ -6,3 +6,11 @@ Test case 2(russian game):
 1. e4 e5 2. Nf3 Nf6 3. Nxe5 Qe7 4. d4 d5
 5. exd5 Nxd5 6. Be2 f6 7. Nd3 Qe4 8. c3 Bh3
 
+Test case 3(bird's opening):
+1. f4 e6 2. Nf3 d5 3. d3 Nf6 4. Nbd2 Bc5
+5. d4 Ng4 6. dxc5 Ne3
+
+Test case 4(bird's opening):
+1. f4 e6 2. Nf3 d5 3. d3 Nf6 4. g3 Be7
+5. Bg2 O-O 6. O-O b5 7. Kh1 Nc6 8. Nbd2 Re8
+9. a4 Ng4 10. axb5 Ne3
