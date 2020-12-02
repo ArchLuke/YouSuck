@@ -705,7 +705,8 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
     }
     int queenBeforeRook=FALSE;
     // rooks, queens
-    for(index = 0; index < 4; ++index) {        
+    for(index = 0; index < 4; ++index) { 
+	queenBeforeRook=FALSE;
         dir = RkDir[index];
         t_sq = sq + dir;
         pce = pos->pieces[t_sq];
@@ -2381,7 +2382,7 @@ void TakeNullMove(S_BOARD *pos) {
 static int TrapSearch(S_BOARD *pos, S_SEARCHINFO *info)
 {
     printf("trap search starting \n");
-        S_MOVELIST list[1];
+    S_MOVELIST list[1];
     S_MOVELIST captures[1];
     int counter;
     int depth;
@@ -2425,7 +2426,8 @@ static int TrapSearch(S_BOARD *pos, S_SEARCHINFO *info)
         
         if( pos->HashTable->pTable[index].posKey == pos->posKey ) {
             pvMove=pos->HashTable->pTable[index].move;
-        }
+        }else
+		break;
         if (score+THRESHOLD>bestScore)
         {
             //check captures
