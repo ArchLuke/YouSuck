@@ -261,7 +261,7 @@ int EvalWhitePawns(const S_BOARD *pos);
 int EvalWhiteQueen(const S_BOARD *pos);
 int EvalWhiteRook(const S_BOARD *pos);
 static int FileRankValid(const int fr);
-static int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], int side, int sq);
+static int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], int side, int sq, int startingsq);
 int FindBit(U64 b);
 static void GenerateAllMoves(const S_BOARD *pos, S_MOVELIST *list, int cap_only);
 static U64 GeneratePosKey(const S_BOARD *pos);

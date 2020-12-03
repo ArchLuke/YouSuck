@@ -48,7 +48,7 @@ const int Mirror64[64] = {
 };
 const int PieceCol[13] = { BOTH, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
     BLACK, BLACK, BLACK, BLACK, BLACK, BLACK };
-const int PieceVal[13]= { 0, 100, 325, 330, 550, 1000, 50000, 100, 325, 330, 550, 1000, 50000  };
+const int PieceVal[13]= { 0, 100, 325, 325, 550, 1000, 50000, 100, 325, 330, 550, 1000, 50000  };
 int RanksBrd[BRD_SQ_NUM];
 
 
@@ -555,39 +555,45 @@ static int EvalCapture(const S_BOARD *pos, const int capture, int pvMove)
     attackingSide=PieceCol[attackingPce];
     defendingSide=attackingSide ^ 1;
 
+    attackers[0]=fromsq;
     if(pvMove & MFLAGCAP)
     {
 	int capturedSq=TOSQ(pvMove);
 	if(capturedSq != tosq)
 	{
-		if((PieceVal[attackedPce]+10)<PieceVal[CAPTURED(pvMove)])
+		if((PieceVal[attackedPce])<PieceVal[CAPTURED(pvMove)])
 			return FALSE;
 	}	
     } 
 
-    FillPieces(pos, attackers, attackingSide, tosq);
-    FillPieces(pos, defenders, defendingSide, tosq);	
+    FillPieces(pos, attackers, attackingSide, tosq, fromsq);
+    FillPieces(pos, defenders, defendingSide, tosq, NO_SQ);	
 
     score=PieceVal[attackedPce];
 
     for(int index=0;index<MAXPIECES;index++)
     {
-	
+
 	int attackerLocation=attackers[index];
-	
+	int defenderLocation=defenders[index];	
+
+	if(index>0)
+	{
+		int captured=defenders[index-1];
+		score += PieceVal[pos->pieces[captured]];
+	}
+
+	if(score<0)
+		return FALSE;
 	if(!attackerLocation)
 		return FALSE;
 	
-	score -= PieceVal[pos->pieces[attackerLocation]];
-	
-	if (score>=0)
-		return TRUE;
-
-	int defenderLocation=defenders[index];
 	if(defenderLocation)
 	{
-		score += PieceVal[pos->pieces[defenderLocation]];
+		score -= PieceVal[pos->pieces[attackerLocation]];
 	}
+	if(score>=0)
+		return TRUE;
 
     }
     return FALSE;
@@ -647,25 +653,31 @@ static int EvalPosition(const S_BOARD *pos) {
 static int FileRankValid(const int fr) {
     return (fr >= 0 && fr <= 7) ? 1 : 0;
 }
-int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq) {
+int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq, int fromsq) {
     int pce,index,t_sq,dir;
-    int count=0;
+    int count;
+
+    if(fromsq==NO_SQ)
+	count=0;
+    else
+	count=1;
+
     // pawn
     if(side == WHITE) {
-        if(pos->pieces[sq-11] == wP) {
+        if(pos->pieces[sq-11] == wP && ((sq-11) != fromsq)) {
 	    pieces[count]=sq-11;
             count ++;
         }
-	if(pos->pieces[sq-9]==wP){
+	if(pos->pieces[sq-9]==wP && ((sq-9) != fromsq)){
 	    pieces[count]=sq-9;
 	    count ++;
 	}
     } else {
-        if(pos->pieces[sq+11] == bP) {
+        if(pos->pieces[sq+11] == bP && ((sq+11) != fromsq)) {
 	    pieces[count]=sq+11;
             count ++;
         }   
-	if(pos->pieces[sq+9] == bP) {
+	if(pos->pieces[sq+9] == bP && ((sq+9) != fromsq)) {
 	    pieces[count]=sq+9;
             count ++;
         }    
@@ -674,7 +686,8 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
     // knights
     for(index = 0; index < 8; ++index) {        
         pce = pos->pieces[sq + KnDir[index]];
-        if(pce != OFFBOARD && IsKn(pce) && PieceCol[pce]==side) {
+        if(pce != OFFBOARD && IsKn(pce) && PieceCol[pce]==side && ((sq+KnDir[index])!=fromsq)) {
+	 
 	    pieces[count]=sq+KnDir[index];
             count ++;
 
@@ -689,11 +702,11 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
         pce = pos->pieces[t_sq];
         while(pce != OFFBOARD) {
             if(pce != EMPTY) {
-                if(IsBQ(pce) && PieceCol[pce] == side) {
+                if(IsBQ(pce) && PieceCol[pce] == side && (t_sq!=fromsq)) {
 		    pieces[count]=t_sq;
                     count ++;
 
-                }else
+                }else if(t_sq != fromsq)
 			break;
 		
 
@@ -712,43 +725,47 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
         pce = pos->pieces[t_sq];
         while(pce != OFFBOARD) {
             if(pce != EMPTY) {
-                if(IsRk(pce) && PieceCol[pce] == side) {
-		    if((pos->pieces[pieces[count-1]]==(side?bQ:wQ)) && !queenBeforeRook)
+                if(IsRk(pce) && PieceCol[pce] == side && (t_sq != fromsq)) {
+		    if(count>0)
 		    {
-			int sq=pieces[count-1];
-			pieces[count-1]=t_sq;
-			pieces[count]=sq;
-			
-			count++;
-	
-			t_sq += dir;
-			pce=pos->pieces[t_sq];
-			continue;
-		    }
-		    if((pos->pieces[pieces[count-1]]==(side?bB:wB)) && (pos->pieces[pieces[count-2]]==(side?bQ:wQ)))
-		    {
-			int sq1=pieces[count-2];
-			int sq2=pieces[count-1];
-			pieces[count-2]=t_sq;
-			pieces[count-1]=sq1;
-			pieces[count]=sq2;
-			
-			count ++;
-			
-			t_sq += dir;
-			pce=pos->pieces[t_sq];
-			continue;
+			    if((pos->pieces[pieces[count-1]]==(side?bQ:wQ)) && !queenBeforeRook)
+			    {
+				int sq=pieces[count-1];
+				pieces[count-1]=t_sq;
+				pieces[count]=sq;
 				
-		    }
+				count++;
+		
+				t_sq += dir;
+				pce=pos->pieces[t_sq];
+				continue;
+			    }
+			    if((pos->pieces[pieces[count-1]]==(side?bB:wB)) && (pos->pieces[pieces[count-2]]==(side?bQ:wQ)))
+			    {
+				int sq1=pieces[count-2];
+				int sq2=pieces[count-1];
+				pieces[count-2]=t_sq;
+				pieces[count-1]=sq1;
+				pieces[count]=sq2;
+				
+				count ++;
+				
+				t_sq += dir;
+				pce=pos->pieces[t_sq];
+				continue;
+					
+			    }
+		     }
 		    pieces[count]=t_sq;
                     count ++;
-                }else if(IsQn(pce) && PieceCol[pce] == side) {
+                }else if(IsQn(pce) && PieceCol[pce] == side && (t_sq!=fromsq)) {
 		    pieces[count]=t_sq;
                     
 		    queenBeforeRook=TRUE;
 		    count ++;
 
-		}else
+		}
+		else if(t_sq != fromsq)
 			break;
                 
             }
@@ -760,7 +777,7 @@ int FillPieces(const S_BOARD *pos, int pieces[MAXPIECES], const int side, int sq
     // kings
     for(index = 0; index < 8; ++index) {        
         pce = pos->pieces[sq + KiDir[index]];
-        if(pce != OFFBOARD && IsKi(pce) && PieceCol[pce]==side) {
+        if(pce != OFFBOARD && IsKi(pce) && PieceCol[pce]==side && ((sq+KiDir[index])!=fromsq)) {
 	    pieces[count]=sq+KiDir[index];
             count ++;
 
