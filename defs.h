@@ -189,10 +189,10 @@ typedef struct {
 #define SQ120(sq64) (Sq64ToSq120[(sq64)])
 #define SQOFFBOARD(sq) (FilesBrd[(sq)]==OFFBOARD)
 
-U64 ClearMask[64];
-U64 SetMask[64];
-int Sq64ToSq120[64];
-int Sq120ToSq64[BRD_SQ_NUM];
+extern U64 ClearMask[64];
+extern U64 SetMask[64];
+extern int Sq64ToSq120[64];
+extern int Sq120ToSq64[BRD_SQ_NUM];
 
 /*globals across files*/
 extern int ColorSquare[64];
