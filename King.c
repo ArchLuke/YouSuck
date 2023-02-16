@@ -1,7 +1,11 @@
 #include "defs.h"
 //globals
-int ColorSquare[64];
-int KingManhattanDistances[64][64];
+extern int ColorSquare[64];
+extern int KingManhattanDistances[64][64];
+extern U64 ClearMask[64];
+extern U64 SetMask[64];
+extern int Sq64ToSq120[64];
+extern int Sq120ToSq64[BRD_SQ_NUM];
 
 const int KingE[64] = {	
 	-50	,	-10	,	0	,	0	,	0	,	0	,	-10	,	-50	,
