@@ -13,13 +13,17 @@ const int KnightTable[64] = {
 0	,	0	,	0	,	0	,	0	,	0	,	0	,	0		
 };
 //globals
-U64 BlackKnightMobilityMask[64];
-U64 BlackOutpostMask[64];
-U64 BlackPawnSupportMask[64];
-int KnightMobility[64];
-U64 WhiteKnightMobilityMask[64];
-U64 WhiteOutpostMask[64];
-U64 WhitePawnSupportMask[64];
+extern U64 BlackKnightMobilityMask[64];
+extern U64 BlackOutpostMask[64];
+extern U64 BlackPawnSupportMask[64];
+extern int KnightMobility[64];
+extern U64 WhiteKnightMobilityMask[64];
+extern U64 WhiteOutpostMask[64];
+extern U64 WhitePawnSupportMask[64];
+extern U64 ClearMask[64];
+extern U64 SetMask[64];
+extern int Sq64ToSq120[64];
+extern int Sq120ToSq64[BRD_SQ_NUM];
 
 int EvalWhiteKnight(const S_BOARD *pos)
 {
