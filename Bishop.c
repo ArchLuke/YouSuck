@@ -13,11 +13,11 @@ const int BishopTable[64] = {
 };
 
 //globals
-U64 BlackBishopForwardMask[64][2];
-int BlaxMaxDiagonalDistance[64][2];
-int DiagonalDistance[64][64];
-U64 WhiteBishopForwardMask[64][2];
-int WhiteMaxDiagonalDistance[64][2];
+extern U64 BlackBishopForwardMask[64][2];
+extern int BlaxMaxDiagonalDistance[64][2];
+extern int DiagonalDistance[64][64];
+extern U64 WhiteBishopForwardMask[64][2];
+extern int WhiteMaxDiagonalDistance[64][2];
 
 int EvalWhiteBishop(const S_BOARD *pos)
 {
