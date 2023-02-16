@@ -29,6 +29,10 @@ U64 WhiteKnightMobilityMask[64];
 U64 WhiteOutpostMask[64];
 U64 WhitePassedMask[64];
 U64 WhitePawnSupportMask[64];
+U64 ClearMask[64];
+U64 SetMask[64];
+int Sq64ToSq120[64];
+int Sq120ToSq64[BRD_SQ_NUM];
 
 const int BiDir[4] = { -9, -11, 11, 9 };
 const int KiDir[8] = { -1, -10,    1, 10, -9, -11, 11, 9 };
