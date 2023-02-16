@@ -13,6 +13,10 @@ const int BishopTable[64] = {
 };
 
 //globals
+extern U64 ClearMask[64];
+extern U64 SetMask[64];
+extern int Sq64ToSq120[64];
+extern int Sq120ToSq64[BRD_SQ_NUM];
 extern U64 BlackBishopForwardMask[64][2];
 extern int BlaxMaxDiagonalDistance[64][2];
 extern int DiagonalDistance[64][64];
